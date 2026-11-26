@@ -501,6 +501,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
               <input class="inp" type="text" data-bind="mq.sep" maxlength="12" placeholder="•"></div>
             <div class="field"><label>글꼴</label>
               <select class="sel" data-bind="mq.font">
+                <option value="malgun">맑은 고딕</option>
                 <option value="sans">기본 (고딕)</option>
                 <option value="serif">세리프 (명조)</option>
                 <option value="mono">고정폭</option>
@@ -587,6 +588,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
       <!-- 모양 -->
       <section class="pane" data-pane="look">
         <div class="card">
+          <label class="switch"><span>티켓 정보 넣기</span><input type="checkbox" data-bind="look.info"></label>
+          <p class="hint">공연명·일시·장소·좌석·바코드를 티켓에 올립니다. 켜면 아래에 <b>정보</b> 탭이 생깁니다.</p>
+        </div>
+        <div class="card">
           <div class="grid2">
             <div class="field"><label>강조색</label><input type="color" data-bind="look.accent"></div>
             <div class="field"><label>글자색</label><input type="color" data-bind="look.text"></div>
@@ -594,13 +599,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <div class="field"><label>제목 글꼴</label>
             <select class="sel" data-bind="look.font">
               <option value="sans">기본 (고딕)</option>
+              <option value="malgun">맑은 고딕</option>
               <option value="serif">세리프 (명조)</option>
               <option value="mono">고정폭</option>
             </select></div>
           <div class="field"><label>제목 크기 <span class="val" data-val="look.titleSize"></span></label>
             <input type="range" min="16" max="48" step="1" data-bind="look.titleSize" data-unit="px"></div>
         </div>
-        <div class="card">
+        <div class="card" id="lookCardGroup">
           <div class="pane-title">정보 카드</div>
           <div class="field"><label>투명도 <span class="val" data-val="look.cardAlpha"></span></label>
             <input type="range" min="0" max="100" step="1" data-bind="look.cardAlpha" data-unit="%"></div>
@@ -682,6 +688,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
    ============================================================ */
 const FONTS = {
   sans:'-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif',
+  malgun:'"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif',
   serif:'"Noto Serif KR","Nanum Myeongjo",Batang,"Times New Roman",serif',
   mono:'ui-monospace,"D2Coding",Consolas,"Courier New",monospace'
 };
@@ -690,12 +697,13 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
+    v: 2,
     updated: Date.now(),
     bg: { img:null, fit:'cover', posX:50, posY:50, zoom:100, dim:35, blur:0, gray:0, gradient:true },
     mq: {
-      text:'캡처 화면으로는 입장할 수 없습니다', sep:'  •  ', font:'sans',
+      text:'캡처화면은 입장이 제한됩니다.', sep:'  •  ', font:'malgun',
       size:15, weight:800, ls:0, pad:11,
-      color:'#ffffff', bg:'#ff4d6d', bgAlpha:85,
+      color:'#ffffff', bg:'#000000', bgAlpha:100,
       speed:70, dir:'left', italic:false, clock:true, running:true
     },
     info: {
@@ -705,11 +713,28 @@ function defaults(){
       no:'T2612240012', holder:'홍길동', exLabel:'', exValue:''
     },
     look: {
+      info:false,                 /* 티켓 정보(공연명·일시·좌석·바코드) — 기본은 없음 */
       accent:'#ff4d6d', text:'#ffffff', font:'sans', titleSize:27,
       cardAlpha:42, cardBlur:true, topbar:true, topTitle:'모바일 티켓', topClock:true,
       code:true, shadow:true, sheen:false
     }
   };
+}
+
+/* 예전(v1)에 저장해 둔 티켓은, 손대지 않은 기본값만 조용히 새 기본값으로 올린다.
+   직접 바꾼 값은 그대로 둔다. */
+const V1_MQ = { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85 };
+function migrate(rec){
+  if(!rec || typeof rec !== 'object' || (rec.v|0) >= 2) return rec;
+  const d = defaults(), m = rec.mq;
+  if(m){
+    if(m.text === V1_MQ.text)       m.text = d.mq.text;
+    if(m.font === V1_MQ.font)       m.font = d.mq.font;
+    if(m.bg === V1_MQ.bg)           m.bg = d.mq.bg;
+    if(m.bgAlpha === V1_MQ.bgAlpha) m.bgAlpha = d.mq.bgAlpha;
+  }
+  rec.v = 2;
+  return rec;
 }
 
 let state = defaults();
@@ -910,6 +935,7 @@ function cacheNodes(){
   T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
   T.top=$('#tkTop'); T.topTitle=$('#tkTopTitle'); T.topTime=$('#tkTopTime');
   T.badge=$('#tkBadge'); T.title=$('#tkTitle'); T.sub=$('#tkSub');
+  T.head=document.querySelector('.tk-head');
   T.card=$('#tkCard'); T.rows=$('#tkRows'); T.bars=$('#tkBars'); T.codeNo=$('#tkCodeNo');
   T.mq=$('#tkMarquee'); T.track=$('#mqTrack');
 }
@@ -949,6 +975,11 @@ function render(){
   T.topTitle.textContent = look.topTitle || '';
   T.topTime.textContent = look.topClock ? hhmm() : '';
 
+  /* 티켓 정보를 끄면 배경 사진과 흐르는 글자만 남는다 */
+  T.head.style.display = look.info ? 'grid' : 'none';
+  $('#lookCardGroup').hidden = !look.info;
+  syncTabs();
+
   T.badge.textContent = info.badge || '';
   T.title.textContent = info.title || '';
   T.title.style.fontSize = look.titleSize + 'px';
@@ -970,10 +1001,10 @@ function render(){
     const dd = document.createElement('dd'); dd.textContent = v;
     div.append(dt, dd); T.rows.appendChild(div);
   }
-  T.card.style.display = (rows.length || look.code) ? 'grid' : 'none';
+  T.card.style.display = (look.info && (rows.length || look.code)) ? 'grid' : 'none';
 
   T.codeNo.textContent = info.no || '';
-  if(look.code) drawBars();
+  if(look.info && look.code) drawBars();
 
   styleMarquee();
 }
@@ -1134,7 +1165,7 @@ function afterLoad(){
 async function loadTicket(id){
   try {
     const rec = await DB.get(id);
-    if(rec){ state = merge(defaults(), rec); state.id = rec.id; }
+    if(rec){ state = merge(defaults(), migrate(rec)); state.id = rec.id; }
   } catch(e){}
   afterLoad();
 }
@@ -1161,7 +1192,7 @@ async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
   buildMarquee();
-  if(state.look.code) drawBars();
+  if(state.look.info && state.look.code) drawBars();
   hideCtrlSoon();
   try { if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 }
@@ -1171,7 +1202,7 @@ function closePreview(){
   $('#fsCtrl').classList.remove('dim');
   clearTimeout(ctrlTimer);
   buildMarquee();
-  if(state.look.code) drawBars();
+  if(state.look.info && state.look.code) drawBars();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
 }
@@ -1197,7 +1228,7 @@ async function importJson(file){
     const obj = JSON.parse(await file.text());
     if(!obj || typeof obj !== 'object') throw new Error('bad');
     const d = defaults();
-    state = merge(d, obj);
+    state = merge(d, migrate(obj));
     state.id = d.id;
     state.name = obj.name || '가져온 티켓';
     afterLoad(); save();
@@ -1208,16 +1239,26 @@ async function importJson(file){
 /* ============================================================
    11. 탭 · 미리보기 높이
    ============================================================ */
+let showTab = () => {};
 function wireTabs(){
   const tabs = $$('#tabs button');
-  const show = key => {
+  showTab = key => {
+    const btn = document.querySelector(`#tabs button[data-tab="${key}"]`);
+    if(!btn || btn.hidden) key = 'photo';
     for(const b of tabs) b.setAttribute('aria-selected', String(b.dataset.tab === key));
     for(const p of $$('.pane')) p.classList.toggle('on', p.dataset.pane === key);
     $('#panes').scrollTop = 0;
     PREF.set('tab', key);
   };
-  for(const b of tabs) b.addEventListener('click', ()=> show(b.dataset.tab));
-  show(PREF.get('tab','photo'));
+  for(const b of tabs) b.addEventListener('click', ()=> showTab(b.dataset.tab));
+}
+/* 정보를 끄면 정보 탭 자체를 없앤다 */
+function syncTabs(){
+  const btn = document.querySelector('#tabs button[data-tab="info"]');
+  if(!btn) return;
+  const on = !!state.look.info;
+  btn.hidden = !on;
+  if(!on && btn.getAttribute('aria-selected') === 'true') showTab('look');
 }
 
 function setStageFrac(f){
@@ -1358,7 +1399,7 @@ function wireObservers(){
   if(!window.ResizeObserver) return;
   const ro = new ResizeObserver(() => {
     clearTimeout(roTimer);
-    roTimer = setTimeout(() => { buildMarquee(); if(state.look.code) drawBars(); }, 120);
+    roTimer = setTimeout(() => { buildMarquee(); if(state.look.info && state.look.code) drawBars(); }, 120);
   });
   ro.observe(T.mq);
   ro.observe(T.bars);
@@ -1401,19 +1442,20 @@ if('serviceWorker' in navigator && location.protocol !== 'file:'){
     const all = await DB.all();
     if(all && all.length){
       const rec = all.find(t => t.id === cur) || all.sort((a,b)=>(b.updated||0)-(a.updated||0))[0];
-      if(rec){ state = merge(defaults(), rec); state.id = rec.id; loaded = true; }
+      if(rec){ state = merge(defaults(), migrate(rec)); state.id = rec.id; loaded = true; }
     }
   } catch(e){
     const ls = LS.load();
-    if(ls){ state = merge(defaults(), ls); loaded = true; }
+    if(ls){ state = merge(defaults(), migrate(ls)); loaded = true; }
     toast('이 브라우저에서는 저장이 제한될 수 있습니다');
   }
 
   fillForm();
-  render();
+  render();                               // render 안에서 정보 탭 노출까지 정리한다
+  showTab(PREF.get('tab','photo'));
   buildMarquee();
   await refreshTicketList();
-  if(!loaded) save();
+  save();                                  // 마이그레이션 결과까지 한 번 저장해 둔다
 })();
 </script>
 </body>
