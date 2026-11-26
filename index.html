@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b0c10">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="티켓 메이커">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
@@ -18,10 +19,14 @@
   --bg:#0b0c10; --bg-2:#101218; --panel:#161922; --panel-2:#1d212b; --panel-3:#242936;
   --line:#2b313e; --line-2:#394252;
   --txt:#e9ebf1; --txt-2:#a7aebd; --txt-3:#6f7788;
-  --accent:#ff4d6d; --accent-2:#7c5cff; --ok:#2fd27a;
+  --accent:#ff4d6d; --accent-2:#7c5cff;
   --r:14px; --r-sm:10px;
   --shadow:0 18px 40px rgba(0,0,0,.45);
   --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --head-h:52px;
+  --stage-h:44dvh;      /* 모바일 미리보기 높이 (손가락으로 조절) */
+  --tabs-h:62px;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
@@ -30,6 +35,7 @@ body{
   margin:0; background:var(--bg); color:var(--txt);
   font:14px/1.5 -apple-system,BlinkMacSystemFont,"Pretendard","Pretendard GOV","Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;
   -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
 }
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -40,116 +46,123 @@ h1,h2,h3,p{margin:0}
 
 /* ===== 상단바 ===== */
 .topbar{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 14px; border-bottom:1px solid var(--line);
-  background:linear-gradient(180deg,#14171f,#0f1218); position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;gap:8px;height:var(--head-h);
+  padding:0 12px; border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#14171f,#0f1218); position:relative;z-index:30;
 }
-.brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.3px;white-space:nowrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:-.3px;white-space:nowrap}
 .brand-mark{
-  width:22px;height:22px;border-radius:7px;flex:0 0 auto;
+  width:24px;height:24px;border-radius:7px;flex:0 0 auto;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset;
-  position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12) inset;position:relative;
 }
 .brand-mark::after{
-  content:"";position:absolute;inset:6px 4px;border-radius:2px;
+  content:"";position:absolute;inset:7px 5px;border-radius:2px;
   background:repeating-linear-gradient(90deg,#fff 0 2px,transparent 2px 4px);opacity:.85;
 }
-.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0}
-.sel,.inp,.ta{
+.top-actions{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:0;flex:1;justify-content:flex-end}
+.sel,.inp{
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:8px 10px;width:100%;outline:none;min-width:0;
+  padding:10px;width:100%;outline:none;min-width:0;font-size:16px;  /* 16px: iOS 자동 확대 방지 */
 }
-.sel:focus,.inp:focus,.ta:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
-.top-actions .sel{max-width:190px}
+.sel:focus,.inp:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+.top-actions .sel{max-width:190px;padding:7px 8px;font-size:14px}
 .icon-btn{
-  width:34px;height:34px;flex:0 0 auto;border-radius:9px;border:1px solid var(--line);
-  background:var(--panel-2);display:grid;place-items:center;font-size:16px;line-height:1;
+  width:38px;height:38px;flex:0 0 auto;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel-2);display:grid;place-items:center;font-size:17px;line-height:1;
 }
-.icon-btn:hover{background:var(--panel-3)}
 .btn{
   border:1px solid var(--line);background:var(--panel-2);border-radius:var(--r-sm);
-  padding:9px 14px;font-weight:600;
+  padding:11px 14px;font-weight:600;min-height:44px;
 }
-.btn:hover{background:var(--panel-3)}
-.btn-primary{
-  border:none;background:linear-gradient(135deg,var(--accent),#ff6b4d);color:#fff;
-  box-shadow:0 6px 18px rgba(255,77,109,.3);
-}
+.btn-primary{border:none;background:linear-gradient(135deg,var(--accent),#ff6b4d);color:#fff}
 .btn-ghost{background:transparent}
 .btn-danger{color:#ff8097;border-color:#4a2a33}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn-row>.btn{flex:1;min-width:120px}
 
 /* ===== 레이아웃 ===== */
-.app{display:grid;grid-template-columns:minmax(340px,420px) 1fr;height:calc(100% - 55px)}
-.editor{overflow-y:auto;border-right:1px solid var(--line);padding:14px 14px 90px;background:var(--bg-2)}
+/* 1fr 의 기본 최소크기는 min-content 라, 흐르는 글자 트랙(max-content)이
+   열 너비를 통째로 밀어내 버린다. 반드시 minmax(0,1fr) 로 묶는다. */
+.app{display:grid;grid-template-columns:minmax(340px,430px) minmax(0,1fr);height:calc(100% - var(--head-h))}
+.editor{order:1;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--bg-2)}
+.panes{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 14px 24px}
 .stage{
-  display:grid;place-items:center;gap:14px;align-content:center;padding:20px;overflow:auto;
+  order:2;display:grid;place-items:center;align-content:center;gap:10px;padding:18px;overflow:hidden;
   background:radial-gradient(1200px 600px at 50% -10%,#1b1f2b 0%,var(--bg) 60%);
 }
+.grip{display:none}
+.grip-btn{display:none}
 
-/* ===== 섹션 ===== */
-details.sec{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-bottom:10px;overflow:hidden}
-details.sec>summary{
-  list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;display:flex;align-items:center;gap:9px;
-  background:linear-gradient(180deg,#1a1e28,#161922);
+/* ===== 탭 ===== */
+.tabs{
+  display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--line);
+  background:var(--panel);flex:0 0 auto;
 }
-details.sec>summary::-webkit-details-marker{display:none}
-details.sec>summary::after{content:"▾";margin-left:auto;color:var(--txt-3);transition:transform .15s}
-details.sec[open]>summary::after{transform:rotate(180deg)}
-.sec-ico{
-  width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;
-  background:var(--panel-3);color:var(--txt-2);flex:0 0 auto;font-weight:800;font-variant-numeric:tabular-nums;
+.tabs button{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+  border:none;background:transparent;color:var(--txt-3);border-radius:10px;
+  padding:9px 4px;font-size:12.5px;font-weight:700;min-height:44px;
 }
-.sec-body{padding:12px 14px 14px;border-top:1px solid var(--line);display:grid;gap:12px}
+.tabs button svg{width:19px;height:19px;flex:0 0 auto}
+.tabs button[aria-selected="true"]{background:var(--panel-3);color:var(--txt)}
 
-.field{display:grid;gap:6px}
-.field>label{font-size:12px;color:var(--txt-2);font-weight:600;display:flex;align-items:center;gap:6px}
-.field .val{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums;font-weight:700}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pane{display:none;gap:14px}
+.pane.on{display:grid}
+.pane-title{font-size:13px;font-weight:800;color:var(--txt-2);letter-spacing:-.2px}
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:14px;display:grid;gap:13px}
+
+.field{display:grid;gap:7px}
+.field>label{font-size:12.5px;color:var(--txt-2);font-weight:700;display:flex;align-items:center;gap:6px}
+.field .val{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums;font-weight:800}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.hint{font-size:11.5px;color:var(--txt-3);line-height:1.45}
+.hint{font-size:12px;color:var(--txt-3);line-height:1.5}
 
 input[type=range]{
-  -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;
+  -webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:0;
+  touch-action:pan-y;
 }
-input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:4px;background:var(--line-2)}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:var(--line-2)}
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#fff;margin-top:-6px;
-  box-shadow:0 1px 4px rgba(0,0,0,.6);border:none;
+  -webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;margin-top:-9px;
+  box-shadow:0 2px 6px rgba(0,0,0,.6);border:none;
 }
-input[type=range]::-moz-range-track{height:4px;border-radius:4px;background:var(--line-2)}
-input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:#fff}
+input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:var(--line-2)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border:none;border-radius:50%;background:#fff}
 
 input[type=color]{
-  -webkit-appearance:none;appearance:none;width:100%;height:36px;padding:0;
+  -webkit-appearance:none;appearance:none;width:100%;height:46px;padding:0;
   background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);cursor:pointer;
 }
-input[type=color]::-webkit-color-swatch-wrapper{padding:4px}
-input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
+input[type=color]::-webkit-color-swatch-wrapper{padding:5px}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 
-.switch{display:flex;align-items:center;gap:10px;justify-content:space-between;cursor:pointer;user-select:none}
-.switch>span{font-size:13px;font-weight:600}
-.switch input{appearance:none;-webkit-appearance:none;margin:0;width:42px;height:24px;border-radius:999px;background:var(--line-2);position:relative;transition:background .15s;flex:0 0 auto;cursor:pointer}
-.switch input::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch{display:flex;align-items:center;gap:10px;justify-content:space-between;cursor:pointer;user-select:none;min-height:40px}
+.switch>span{font-size:13.5px;font-weight:700}
+.switch input{
+  appearance:none;-webkit-appearance:none;margin:0;width:50px;height:30px;border-radius:999px;
+  background:var(--line-2);position:relative;transition:background .15s;flex:0 0 auto;cursor:pointer;
+}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s}
 .switch input:checked{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
-.switch input:checked::after{transform:translateX(18px)}
+.switch input:checked::after{transform:translateX(20px)}
 
-.seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:3px;gap:3px}
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:4px;gap:4px}
 .seg label{flex:1;text-align:center}
 .seg input{display:none}
-.seg span{display:block;padding:7px 4px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--txt-2)}
+.seg span{display:block;padding:10px 4px;border-radius:8px;font-size:13px;font-weight:700;color:var(--txt-2)}
 .seg input:checked+span{background:var(--panel-3);color:var(--txt);box-shadow:0 0 0 1px var(--line-2) inset}
 
 .drop{
-  border:1.5px dashed var(--line-2);border-radius:var(--r);padding:16px;text-align:center;
+  border:1.5px dashed var(--line-2);border-radius:var(--r);padding:20px 16px;text-align:center;
   background:var(--panel-2);display:grid;gap:8px;place-items:center;cursor:pointer;
 }
 .drop.over{border-color:var(--accent);background:#20141a}
-.drop b{font-size:13px}
-.thumb{width:100%;height:120px;border-radius:var(--r-sm);object-fit:cover;background:#000;border:1px solid var(--line)}
+.drop b{font-size:15px}
+.thumb{width:100%;height:130px;border-radius:var(--r-sm);object-fit:cover;background:#000;border:1px solid var(--line)}
 
-/* ===== 폰 프레임 ===== */
+/* ===== 폰 프레임 (데스크톱) ===== */
 .phone{
   width:412px;height:866px;flex:0 0 auto;border-radius:48px;padding:11px;
   background:linear-gradient(160deg,#2b303c,#14171d 60%);
@@ -161,17 +174,25 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
   content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);
   width:104px;height:26px;border-radius:999px;background:#0a0b0e;z-index:5;
 }
-.stage-hint{color:var(--txt-3);font-size:12px;text-align:center}
+.stage-tools{display:flex;gap:8px}
+.chip{
+  border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);
+  border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;
+}
+.chip:hover{color:var(--txt)}
 
 /* ===== 티켓 ===== */
 .ticket{
   position:relative;width:100%;height:100%;overflow:hidden;
   display:flex;flex-direction:column;isolation:isolate;
   background:#0d0f14;color:#fff;
-  --tk-accent:#ff4d6d; --tk-text:#ffffff;
-  --tk-inset-top:0px;           /* 상태표시줄·노치 자리 */
+  --tk-accent:#ff4d6d;
+  --tk-inset-top:0px;                 /* 상태표시줄·노치 자리 */
+  --tk-inset-bot:0px;                 /* 홈 인디케이터 자리 */
 }
-.phone-screen .ticket{--tk-inset-top:30px}
+/* 기기의 안전영역은 전체화면으로 볼 때만 쓴다. 작은 미리보기에 넣으면 빈 띠만 생긴다 */
+#fsStage .ticket{--tk-inset-top:env(safe-area-inset-top,0px);--tk-inset-bot:env(safe-area-inset-bottom,0px)}
+.phone-screen .ticket{--tk-inset-top:30px}   /* 데스크톱 폰 프레임의 노치 자리 */
 .tk-bg{
   position:absolute;inset:0;z-index:0;background-repeat:no-repeat;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
@@ -188,8 +209,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 @keyframes sheen{0%{background-position:160% 0}55%,100%{background-position:-60% 0}}
 
 .tk-top{
-  position:relative;z-index:3;display:flex;align-items:center;gap:10px;
-  padding:calc(16px + var(--tk-inset-top) + env(safe-area-inset-top,0px)) 16px 10px;
+  position:relative;z-index:3;display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  padding:calc(14px + var(--tk-inset-top)) 16px 10px;
   font-size:14px;font-weight:700;
 }
 .tk-top-back{font-size:22px;line-height:1;opacity:.9;margin-top:-2px}
@@ -199,30 +220,28 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 .tk-body{
   position:relative;z-index:3;flex:1;min-height:0;display:flex;flex-direction:column;
   gap:14px;padding:6px 20px 16px;overflow:hidden;
-  width:100%;max-width:560px;margin-inline:auto;      /* 넓은 화면에서 너무 늘어나지 않게 */
+  width:100%;max-width:560px;margin-inline:auto;
 }
-.ticket.no-top .tk-body{padding-top:calc(10px + var(--tk-inset-top) + env(safe-area-inset-top,0px))}
-.tk-head{display:grid;gap:7px;margin-top:6px}
+.ticket.no-top .tk-body{padding-top:calc(10px + var(--tk-inset-top))}
+/* 미리보기 띠가 짧을 때 제목이 카드 위로 비어져 나오지 않게 잘라 낸다 */
+.tk-head{display:grid;gap:7px;margin-top:6px;min-height:0;overflow:hidden}
 .tk-badge{
   justify-self:start;font-size:11px;font-weight:800;letter-spacing:.3px;
   padding:5px 10px;border-radius:999px;background:var(--tk-accent);color:#fff;
   box-shadow:0 4px 14px rgba(0,0,0,.35);
 }
 .tk-badge:empty{display:none}
-.tk-title{
-  font-size:27px;line-height:1.22;font-weight:800;letter-spacing:-.6px;
-  word-break:keep-all;text-wrap:balance;
-}
+.tk-title{font-size:27px;line-height:1.22;font-weight:800;letter-spacing:-.6px;word-break:keep-all}
 .tk-sub{font-size:14px;opacity:.82;word-break:keep-all}
 .tk-sub:empty{display:none}
 
 .tk-card{
-  margin-top:auto;border-radius:18px;padding:16px 16px 14px;
+  margin-top:auto;flex:0 0 auto;border-radius:18px;padding:16px 16px 14px;
   background:rgba(10,12,18,.42);border:1px solid rgba(255,255,255,.14);
   display:grid;gap:12px;
 }
 .tk-card.blur{backdrop-filter:blur(14px) saturate(130%);-webkit-backdrop-filter:blur(14px) saturate(130%)}
-.tk-rows{display:grid;gap:9px}
+.tk-rows{display:grid;gap:9px;margin:0}
 .tk-row{display:flex;gap:12px;align-items:baseline;font-size:14px}
 .tk-row dt{flex:0 0 58px;font-size:12px;opacity:.65;font-weight:700}
 .tk-row dd{margin:0;flex:1;font-weight:700;word-break:keep-all;text-align:right}
@@ -240,7 +259,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 /* ===== 흐르는 글자 ===== */
 .tk-marquee{
   position:relative;z-index:4;flex:0 0 auto;overflow:hidden;
-  padding-bottom:env(safe-area-inset-bottom,0px);
   display:flex;align-items:center;
 }
 .mq-track{display:flex;width:max-content;will-change:transform;animation:mq linear infinite}
@@ -252,31 +270,23 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 
 /* ===== 전체화면 미리보기 ===== */
 .fs{position:fixed;inset:0;z-index:200;background:#000;display:flex}
-.fs[hidden]{display:none}
-.fs-stage{flex:1;position:relative;overflow:hidden}
+.fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
 .fs-ctrl{
-  position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:210;
+  position:absolute;top:calc(12px + var(--safe-t));right:12px;z-index:210;
   display:flex;gap:8px;transition:opacity .25s;
 }
 .fs-ctrl.dim{opacity:0;pointer-events:none}
 .fs-ctrl button{
-  border:none;border-radius:999px;padding:9px 14px;font-weight:700;font-size:13px;
+  border:none;border-radius:999px;padding:11px 16px;font-weight:700;font-size:13.5px;
   background:rgba(20,22,28,.72);color:#fff;backdrop-filter:blur(8px);
   box-shadow:0 2px 10px rgba(0,0,0,.4);
 }
 
-/* ===== 모바일 바 / 토스트 ===== */
-.mobile-bar{
-  display:none;position:fixed;left:0;right:0;bottom:0;z-index:40;gap:10px;
-  padding:10px 14px calc(10px + var(--safe-b));
-  background:linear-gradient(180deg,rgba(11,12,16,.4),rgba(11,12,16,.96) 40%);
-  border-top:1px solid var(--line);backdrop-filter:blur(10px);
-}
-.mobile-bar .btn{flex:1}
+/* ===== 토스트 · 시트 ===== */
 .toast{
-  position:fixed;left:50%;bottom:calc(22px + var(--safe-b));transform:translate(-50%,14px);
+  position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translate(-50%,14px);
   background:#242936;border:1px solid var(--line-2);color:var(--txt);
-  padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;z-index:300;
+  padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:700;z-index:300;
   opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;box-shadow:var(--shadow);
   max-width:86vw;text-align:center;
 }
@@ -284,223 +294,90 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 
 .sheet-wrap{position:fixed;inset:0;z-index:150;display:none}
 .sheet-wrap.on{display:block}
-.sheet-bd{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.sheet-bd{position:absolute;inset:0;background:rgba(0,0,0,.55)}
 .sheet{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(360px,92vw);background:var(--panel);border:1px solid var(--line);
-  border-radius:16px;padding:14px;display:grid;gap:8px;box-shadow:var(--shadow);
+  position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(420px,100%);background:var(--panel);border:1px solid var(--line);
+  border-radius:18px 18px 0 0;padding:14px 14px calc(14px + var(--safe-b));
+  display:grid;gap:8px;box-shadow:var(--shadow);
 }
-.sheet h3{font-size:14px;margin-bottom:2px}
-.sheet button{text-align:left;width:100%}
+.sheet h3{font-size:14px;margin-bottom:2px;color:var(--txt-2)}
+.sheet .btn{text-align:left;width:100%}
 
+/* ===== 모바일 ===== */
 @media (max-width:900px){
-  .app{grid-template-columns:1fr;height:auto}
-  .editor{border-right:none;padding-bottom:110px}
-  .stage{display:none}
-  .mobile-bar{display:flex}
+  html,body{height:100dvh;overflow:hidden;overscroll-behavior:none}
+  .app{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:var(--stage-h) 30px minmax(0,1fr);
+    height:calc(100dvh - var(--head-h));
+  }
+  .stage{
+    padding:0;background:#000;place-items:stretch;align-content:stretch;gap:0;
+    position:relative;min-width:0;min-height:0;cursor:pointer;
+  }
+  /* 격자 칸의 기본 최소크기(auto)를 풀어 줘야 티켓이 칸 밖으로 넘치지 않는다 */
+  .phone,.phone-screen,.ticket,.tk-marquee{min-width:0;min-height:0}
+  .stage-tools{display:none}
+  .stage-tools{
+    position:absolute;right:10px;top:calc(10px + var(--safe-t));z-index:6;
+    opacity:.92;
+  }
+  .chip{background:rgba(18,20,26,.72);backdrop-filter:blur(8px);border-color:rgba(255,255,255,.14)}
+  /* 폰 테두리 없이, 실제 폭 그대로 보여 준다 → 글자 크기가 진짜 크기로 보인다 */
+  .phone{
+    width:100%;height:100%;padding:0;border-radius:0;box-shadow:none;background:#000;
+    transform:none !important;margin:0 !important;
+  }
+  .phone::before{display:none}
+  .phone-screen{border-radius:0}
+  .phone-screen .ticket{--tk-inset-top:0px}
+
+  .stage{order:1}
+  .grip{order:2}
+  .editor{order:3}
+
+  .grip{
+    display:grid;place-items:center;background:var(--bg-2);border-bottom:1px solid var(--line);
+    touch-action:none;cursor:ns-resize;position:relative;
+  }
+  .grip::after{content:"";width:44px;height:4px;border-radius:999px;background:var(--line-2)}
+  .grip-btn{
+    display:block;position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);
+    border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;touch-action:auto;
+  }
+
+  .editor{border-right:none}
+  .panes{padding:14px 14px calc(18px + var(--tabs-h) + var(--safe-b))}
+  .tabs{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;order:2;
+    height:calc(var(--tabs-h) + var(--safe-b));padding:6px 6px calc(6px + var(--safe-b));
+    border-top:1px solid var(--line);border-bottom:none;
+    background:rgba(16,18,24,.94);backdrop-filter:blur(12px);
+  }
+  .tabs button{flex-direction:column;gap:3px;font-size:11px;border-radius:12px}
+  .tabs button svg{width:21px;height:21px}
+  .toast{bottom:calc(var(--tabs-h) + 16px + var(--safe-b))}
 }
-@media (prefers-reduced-motion:reduce){
-  .tk-sheen.on{animation:none}
-}
+@media (prefers-reduced-motion:reduce){ .tk-sheen.on{animation:none} }
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand"><span class="brand-mark"></span><span>모바일 티켓 메이커</span></div>
+  <div class="brand"><span class="brand-mark"></span></div>
   <div class="top-actions">
-    <select class="sel" id="ticketSelect" title="티켓 선택"></select>
-    <button class="icon-btn" id="btnNew" title="새 티켓">＋</button>
-    <button class="icon-btn" id="btnMenu" title="더보기">⋯</button>
+    <select class="sel" id="ticketSelect" title="티켓 선택" aria-label="티켓 선택"></select>
+    <button class="icon-btn" id="btnNew" title="새 티켓" aria-label="새 티켓">＋</button>
+    <button class="icon-btn" id="btnMenu" title="더보기" aria-label="더보기">⋯</button>
   </div>
 </header>
 
 <main class="app">
-  <!-- ============ 편집기 ============ -->
-  <section class="editor" id="editor">
-
-    <details class="sec" open>
-      <summary><span class="sec-ico">1</span>배경 사진</summary>
-      <div class="sec-body">
-        <input type="file" id="fileInput" accept="image/*" hidden>
-        <div class="drop" id="drop">
-          <b>사진 선택</b>
-          <span class="hint">폰 앨범·카메라에서 고르거나 여기로 끌어다 놓으세요<br>사진은 이 기기 안에서만 처리되고 밖으로 나가지 않습니다</span>
-        </div>
-        <img class="thumb" id="bgThumb" alt="" hidden>
-        <div class="btn-row" id="bgActions" hidden>
-          <button class="btn" id="btnChangeBg">사진 바꾸기</button>
-          <button class="btn btn-danger" id="btnRemoveBg">사진 제거</button>
-        </div>
-
-        <div class="field">
-          <label>사진 맞춤</label>
-          <div class="seg">
-            <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
-            <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
-          </div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>가로 위치 <span class="val" data-val="bg.posX">50%</span></label>
-            <input type="range" min="0" max="100" step="1" data-bind="bg.posX" data-unit="%"></div>
-          <div class="field"><label>세로 위치 <span class="val" data-val="bg.posY">50%</span></label>
-            <input type="range" min="0" max="100" step="1" data-bind="bg.posY" data-unit="%"></div>
-        </div>
-        <div class="field"><label>확대 <span class="val" data-val="bg.zoom">100%</span></label>
-          <input type="range" min="100" max="260" step="1" data-bind="bg.zoom" data-unit="%"></div>
-        <div class="grid3">
-          <div class="field"><label>어둡게 <span class="val" data-val="bg.dim">35%</span></label>
-            <input type="range" min="0" max="85" step="1" data-bind="bg.dim" data-unit="%"></div>
-          <div class="field"><label>흐림 <span class="val" data-val="bg.blur">0px</span></label>
-            <input type="range" min="0" max="24" step="1" data-bind="bg.blur" data-unit="px"></div>
-          <div class="field"><label>흑백 <span class="val" data-val="bg.gray">0%</span></label>
-            <input type="range" min="0" max="100" step="1" data-bind="bg.gray" data-unit="%"></div>
-        </div>
-        <label class="switch"><span>아래쪽 그라디언트 (글자 잘 보이게)</span>
-          <input type="checkbox" data-bind="bg.gradient"></label>
-      </div>
-    </details>
-
-    <details class="sec" open>
-      <summary><span class="sec-ico">2</span>흐르는 글자</summary>
-      <div class="sec-body">
-        <div class="field"><label>문구</label>
-          <input class="inp" type="text" data-bind="mq.text" placeholder="예: 캡처 화면으로는 입장할 수 없습니다"></div>
-        <div class="grid2">
-          <div class="field"><label>구분 기호</label>
-            <input class="inp" type="text" data-bind="mq.sep" maxlength="12" placeholder="•"></div>
-          <div class="field"><label>글꼴</label>
-            <select class="sel" data-bind="mq.font">
-              <option value="sans">기본 (고딕)</option>
-              <option value="serif">세리프 (명조)</option>
-              <option value="mono">고정폭</option>
-            </select></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>글자 크기 <span class="val" data-val="mq.size">15px</span></label>
-            <input type="range" min="9" max="44" step="1" data-bind="mq.size" data-unit="px"></div>
-          <div class="field"><label>굵기 <span class="val" data-val="mq.weight">800</span></label>
-            <input type="range" min="300" max="900" step="100" data-bind="mq.weight"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>자간 <span class="val" data-val="mq.ls">0px</span></label>
-            <input type="range" min="-1" max="8" step="0.5" data-bind="mq.ls" data-unit="px"></div>
-          <div class="field"><label>띠 높이 <span class="val" data-val="mq.pad">11px</span></label>
-            <input type="range" min="0" max="30" step="1" data-bind="mq.pad" data-unit="px"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>글자색</label><input type="color" data-bind="mq.color"></div>
-          <div class="field"><label>띠 배경색</label><input type="color" data-bind="mq.bg"></div>
-        </div>
-        <div class="field"><label>띠 배경 투명도 <span class="val" data-val="mq.bgAlpha">85%</span></label>
-          <input type="range" min="0" max="100" step="1" data-bind="mq.bgAlpha" data-unit="%"></div>
-        <div class="field"><label>속도 <span class="val" data-val="mq.speed">70px/초</span></label>
-          <input type="range" min="8" max="400" step="1" data-bind="mq.speed" data-unit="px/초"></div>
-        <div class="field">
-          <label>방향</label>
-          <div class="seg">
-            <label><input type="radio" name="mqdir" value="left" data-bind="mq.dir"><span>← 왼쪽</span></label>
-            <label><input type="radio" name="mqdir" value="right" data-bind="mq.dir"><span>오른쪽 →</span></label>
-          </div>
-        </div>
-        <label class="switch"><span>기울임꼴</span><input type="checkbox" data-bind="mq.italic"></label>
-        <label class="switch"><span>현재 시각 함께 표시</span><input type="checkbox" data-bind="mq.clock"></label>
-        <label class="switch"><span>움직이기</span><input type="checkbox" data-bind="mq.running"></label>
-        <p class="hint">실제 모바일 티켓도 캡처 화면과 구분하려고 아래쪽에 글자와 현재 시각을 흘려보냅니다.</p>
-      </div>
-    </details>
-
-    <details class="sec">
-      <summary><span class="sec-ico">3</span>티켓 정보</summary>
-      <div class="sec-body">
-        <div class="field"><label>공연명 / 제목</label>
-          <input class="inp" type="text" data-bind="info.title" placeholder="예: 2026 단독 콘서트"></div>
-        <div class="field"><label>부제</label>
-          <input class="inp" type="text" data-bind="info.sub" placeholder="예: THE FIRST ENCORE"></div>
-        <div class="field"><label>배지</label>
-          <input class="inp" type="text" data-bind="info.badge" maxlength="14" placeholder="예: 예매완료"></div>
-        <div class="field"><label>일시</label>
-          <input class="inp" type="text" data-bind="info.date" placeholder="예: 2026.12.24 (목) 19:30">
-          <div class="btn-row">
-            <input class="inp" type="datetime-local" id="dtPick" style="flex:1;min-width:150px">
-            <button class="btn" id="btnDtFill">이 날짜로 채우기</button>
-          </div>
-        </div>
-        <div class="field"><label>장소</label>
-          <input class="inp" type="text" data-bind="info.place" placeholder="예: 올림픽공원 체조경기장"></div>
-        <div class="grid2">
-          <div class="field"><label>좌석</label>
-            <input class="inp" type="text" data-bind="info.seat" placeholder="예: 1층 A구역 7열 12번"></div>
-          <div class="field"><label>매수</label>
-            <input class="inp" type="text" data-bind="info.count" placeholder="예: 1매"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>예매번호</label>
-            <input class="inp" type="text" data-bind="info.no" placeholder="예: T2612240012"></div>
-          <div class="field"><label>예매자</label>
-            <input class="inp" type="text" data-bind="info.holder" placeholder="예: 홍길동"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>추가 항목 이름</label>
-            <input class="inp" type="text" data-bind="info.exLabel" maxlength="8" placeholder="예: 입장"></div>
-          <div class="field"><label>추가 항목 내용</label>
-            <input class="inp" type="text" data-bind="info.exValue" placeholder="예: 18:30부터"></div>
-        </div>
-        <p class="hint">비워 둔 항목은 티켓에 나타나지 않습니다.</p>
-      </div>
-    </details>
-
-    <details class="sec">
-      <summary><span class="sec-ico">4</span>모양</summary>
-      <div class="sec-body">
-        <div class="grid2">
-          <div class="field"><label>강조색</label><input type="color" data-bind="look.accent"></div>
-          <div class="field"><label>글자색</label><input type="color" data-bind="look.text"></div>
-        </div>
-        <div class="field"><label>제목 글꼴</label>
-          <select class="sel" data-bind="look.font">
-            <option value="sans">기본 (고딕)</option>
-            <option value="serif">세리프 (명조)</option>
-            <option value="mono">고정폭</option>
-          </select></div>
-        <div class="field"><label>제목 크기 <span class="val" data-val="look.titleSize">27px</span></label>
-          <input type="range" min="16" max="48" step="1" data-bind="look.titleSize" data-unit="px"></div>
-        <div class="field"><label>정보 카드 투명도 <span class="val" data-val="look.cardAlpha">42%</span></label>
-          <input type="range" min="0" max="100" step="1" data-bind="look.cardAlpha" data-unit="%"></div>
-        <label class="switch"><span>정보 카드 흐림 효과</span><input type="checkbox" data-bind="look.cardBlur"></label>
-        <label class="switch"><span>상단바 표시</span><input type="checkbox" data-bind="look.topbar"></label>
-        <div class="field"><label>상단바 제목</label>
-          <input class="inp" type="text" data-bind="look.topTitle" placeholder="모바일 티켓"></div>
-        <label class="switch"><span>상단바에 현재 시각</span><input type="checkbox" data-bind="look.topClock"></label>
-        <label class="switch"><span>바코드 영역 표시</span><input type="checkbox" data-bind="look.code"></label>
-        <label class="switch"><span>글자 그림자</span><input type="checkbox" data-bind="look.shadow"></label>
-        <label class="switch"><span>반짝이는 홀로그램 효과</span><input type="checkbox" data-bind="look.sheen"></label>
-      </div>
-    </details>
-
-    <details class="sec">
-      <summary><span class="sec-ico">5</span>저장 · 설치</summary>
-      <div class="sec-body">
-        <div class="btn-row">
-          <button class="btn" id="btnExport">설정 내보내기 (.json)</button>
-          <button class="btn" id="btnImport">가져오기</button>
-          <input type="file" id="importInput" accept="application/json,.json" hidden>
-        </div>
-        <button class="btn btn-primary" id="btnInstall" hidden>홈 화면에 앱 설치</button>
-        <p class="hint" id="installHint">
-          입력한 내용과 사진은 이 기기(브라우저 저장소)에만 자동 저장됩니다.
-          아이폰 사파리는 공유 → “홈 화면에 추가”, 안드로이드 크롬은 메뉴 → “앱 설치”로 홈 화면에 올릴 수 있습니다.
-        </p>
-      </div>
-    </details>
-
-    <p class="hint" style="text-align:center;padding:4px 0 10px">
-      이 앱은 티켓 모양을 꾸며 보는 디자인 도구입니다. 실제 입장권으로는 쓸 수 없습니다.
-    </p>
-  </section>
 
   <!-- ============ 미리보기 ============ -->
-  <section class="stage">
+  <section class="stage" id="stage">
     <div class="phone" id="phone">
       <div class="phone-screen" id="phoneScreen">
 
@@ -536,13 +413,245 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
 
       </div>
     </div>
-    <p class="stage-hint">실제 폰 화면 크기(390 × 844)로 보여 줍니다 · <button class="btn btn-ghost" id="btnPreviewDesktop" style="padding:4px 10px">전체화면 미리보기</button></p>
+    <div class="stage-tools">
+      <button class="chip" id="btnPreview">전체화면</button>
+    </div>
+  </section>
+
+  <div class="grip" id="grip" title="끌어서 미리보기 크기 조절">
+    <button class="grip-btn" id="btnPreview2">전체화면</button>
+  </div>
+
+  <!-- ============ 편집기 ============ -->
+  <section class="editor">
+    <nav class="tabs" id="tabs" role="tablist">
+      <button role="tab" data-tab="photo" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.4"/><path d="M4 17l4.5-4.5 3 3L15 11l5 5"/></svg><span>사진</span>
+      </button>
+      <button role="tab" data-tab="text" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h14M3 12h18M3 17h10"/><path d="M18.5 15.2l3.2 1.8-3.2 1.8z" fill="currentColor" stroke="none"/></svg><span>글자</span>
+      </button>
+      <button role="tab" data-tab="info" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9h10M7 13h7M7 17h4"/></svg><span>정보</span>
+      </button>
+      <button role="tab" data-tab="look" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg><span>모양</span>
+      </button>
+      <button role="tab" data-tab="save" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="M8 10.5l4 4 4-4"/><path d="M4.5 17v3h15v-3"/></svg><span>저장</span>
+      </button>
+    </nav>
+
+    <div class="panes" id="panes">
+
+      <!-- 사진 -->
+      <section class="pane on" data-pane="photo">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+        <div class="card">
+          <div class="drop" id="drop">
+            <b>사진 고르기</b>
+            <span class="hint">앨범에서 고르거나 여기로 끌어다 놓으세요<br>사진은 이 폰 안에서만 처리되고 밖으로 나가지 않습니다</span>
+          </div>
+          <img class="thumb" id="bgThumb" alt="" hidden>
+          <div class="btn-row">
+            <button class="btn" id="btnPickBg">앨범에서</button>
+            <button class="btn" id="btnCamBg">카메라로</button>
+          </div>
+          <button class="btn btn-danger" id="btnRemoveBg" hidden>사진 제거</button>
+        </div>
+
+        <div class="card">
+          <div class="pane-title">배치</div>
+          <div class="field">
+            <label>사진 맞춤</label>
+            <div class="seg">
+              <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
+              <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
+            </div>
+          </div>
+          <div class="field"><label>가로 위치 <span class="val" data-val="bg.posX"></span></label>
+            <input type="range" min="0" max="100" step="1" data-bind="bg.posX" data-unit="%"></div>
+          <div class="field"><label>세로 위치 <span class="val" data-val="bg.posY"></span></label>
+            <input type="range" min="0" max="100" step="1" data-bind="bg.posY" data-unit="%"></div>
+          <div class="field"><label>확대 <span class="val" data-val="bg.zoom"></span></label>
+            <input type="range" min="100" max="260" step="1" data-bind="bg.zoom" data-unit="%"></div>
+        </div>
+
+        <div class="card">
+          <div class="pane-title">색감</div>
+          <div class="field"><label>어둡게 <span class="val" data-val="bg.dim"></span></label>
+            <input type="range" min="0" max="85" step="1" data-bind="bg.dim" data-unit="%"></div>
+          <div class="field"><label>흐림 <span class="val" data-val="bg.blur"></span></label>
+            <input type="range" min="0" max="24" step="1" data-bind="bg.blur" data-unit="px"></div>
+          <div class="field"><label>흑백 <span class="val" data-val="bg.gray"></span></label>
+            <input type="range" min="0" max="100" step="1" data-bind="bg.gray" data-unit="%"></div>
+          <label class="switch"><span>아래쪽 그라디언트 (글자 잘 보이게)</span>
+            <input type="checkbox" data-bind="bg.gradient"></label>
+        </div>
+      </section>
+
+      <!-- 흐르는 글자 -->
+      <section class="pane" data-pane="text">
+        <div class="card">
+          <div class="field"><label>문구</label>
+            <input class="inp" type="text" data-bind="mq.text" enterkeyhint="done" placeholder="예: 캡처 화면으로는 입장할 수 없습니다"></div>
+          <div class="grid2">
+            <div class="field"><label>구분 기호</label>
+              <input class="inp" type="text" data-bind="mq.sep" maxlength="12" placeholder="•"></div>
+            <div class="field"><label>글꼴</label>
+              <select class="sel" data-bind="mq.font">
+                <option value="sans">기본 (고딕)</option>
+                <option value="serif">세리프 (명조)</option>
+                <option value="mono">고정폭</option>
+              </select></div>
+          </div>
+          <label class="switch"><span>현재 시각 함께 표시</span><input type="checkbox" data-bind="mq.clock"></label>
+          <label class="switch"><span>움직이기</span><input type="checkbox" data-bind="mq.running"></label>
+        </div>
+
+        <div class="card">
+          <div class="pane-title">움직임</div>
+          <div class="field"><label>속도 <span class="val" data-val="mq.speed"></span></label>
+            <input type="range" min="8" max="400" step="1" data-bind="mq.speed" data-unit="px/초"></div>
+          <div class="field">
+            <label>방향</label>
+            <div class="seg">
+              <label><input type="radio" name="mqdir" value="left" data-bind="mq.dir"><span>← 왼쪽</span></label>
+              <label><input type="radio" name="mqdir" value="right" data-bind="mq.dir"><span>오른쪽 →</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="pane-title">서식</div>
+          <div class="field"><label>글자 크기 <span class="val" data-val="mq.size"></span></label>
+            <input type="range" min="9" max="44" step="1" data-bind="mq.size" data-unit="px"></div>
+          <div class="field"><label>굵기 <span class="val" data-val="mq.weight"></span></label>
+            <input type="range" min="300" max="900" step="100" data-bind="mq.weight"></div>
+          <div class="field"><label>자간 <span class="val" data-val="mq.ls"></span></label>
+            <input type="range" min="-1" max="8" step="0.5" data-bind="mq.ls" data-unit="px"></div>
+          <div class="field"><label>띠 높이 <span class="val" data-val="mq.pad"></span></label>
+            <input type="range" min="0" max="30" step="1" data-bind="mq.pad" data-unit="px"></div>
+          <div class="grid2">
+            <div class="field"><label>글자색</label><input type="color" data-bind="mq.color"></div>
+            <div class="field"><label>띠 배경색</label><input type="color" data-bind="mq.bg"></div>
+          </div>
+          <div class="field"><label>띠 배경 투명도 <span class="val" data-val="mq.bgAlpha"></span></label>
+            <input type="range" min="0" max="100" step="1" data-bind="mq.bgAlpha" data-unit="%"></div>
+          <label class="switch"><span>기울임꼴</span><input type="checkbox" data-bind="mq.italic"></label>
+        </div>
+        <p class="hint">실제 모바일 티켓도 캡처 화면과 구분하려고 아래쪽에 글자와 현재 시각을 흘려보냅니다.</p>
+      </section>
+
+      <!-- 티켓 정보 -->
+      <section class="pane" data-pane="info">
+        <div class="card">
+          <div class="field"><label>공연명 / 제목</label>
+            <input class="inp" type="text" data-bind="info.title" placeholder="예: 2026 단독 콘서트"></div>
+          <div class="field"><label>부제</label>
+            <input class="inp" type="text" data-bind="info.sub" placeholder="예: THE FIRST ENCORE"></div>
+          <div class="field"><label>배지</label>
+            <input class="inp" type="text" data-bind="info.badge" maxlength="14" placeholder="예: 예매완료"></div>
+        </div>
+        <div class="card">
+          <div class="field"><label>일시</label>
+            <input class="inp" type="text" data-bind="info.date" placeholder="예: 2026.12.24 (목) 19:30">
+            <div class="btn-row">
+              <input class="inp" type="datetime-local" id="dtPick" style="flex:1">
+              <button class="btn" id="btnDtFill">이 날짜로</button>
+            </div>
+          </div>
+          <div class="field"><label>장소</label>
+            <input class="inp" type="text" data-bind="info.place" placeholder="예: 올림픽공원 체조경기장"></div>
+          <div class="field"><label>좌석</label>
+            <input class="inp" type="text" data-bind="info.seat" placeholder="예: 1층 A구역 7열 12번"></div>
+          <div class="field"><label>매수</label>
+            <input class="inp" type="text" data-bind="info.count" placeholder="예: 1매"></div>
+        </div>
+        <div class="card">
+          <div class="field"><label>예매번호</label>
+            <input class="inp" type="text" data-bind="info.no" placeholder="예: T2612240012"></div>
+          <div class="field"><label>예매자</label>
+            <input class="inp" type="text" data-bind="info.holder" placeholder="예: 홍길동"></div>
+          <div class="grid2">
+            <div class="field"><label>추가 항목 이름</label>
+              <input class="inp" type="text" data-bind="info.exLabel" maxlength="8" placeholder="입장"></div>
+            <div class="field"><label>추가 항목 내용</label>
+              <input class="inp" type="text" data-bind="info.exValue" placeholder="18:30부터"></div>
+          </div>
+          <p class="hint">비워 둔 항목은 티켓에 나타나지 않습니다.</p>
+        </div>
+      </section>
+
+      <!-- 모양 -->
+      <section class="pane" data-pane="look">
+        <div class="card">
+          <div class="grid2">
+            <div class="field"><label>강조색</label><input type="color" data-bind="look.accent"></div>
+            <div class="field"><label>글자색</label><input type="color" data-bind="look.text"></div>
+          </div>
+          <div class="field"><label>제목 글꼴</label>
+            <select class="sel" data-bind="look.font">
+              <option value="sans">기본 (고딕)</option>
+              <option value="serif">세리프 (명조)</option>
+              <option value="mono">고정폭</option>
+            </select></div>
+          <div class="field"><label>제목 크기 <span class="val" data-val="look.titleSize"></span></label>
+            <input type="range" min="16" max="48" step="1" data-bind="look.titleSize" data-unit="px"></div>
+        </div>
+        <div class="card">
+          <div class="pane-title">정보 카드</div>
+          <div class="field"><label>투명도 <span class="val" data-val="look.cardAlpha"></span></label>
+            <input type="range" min="0" max="100" step="1" data-bind="look.cardAlpha" data-unit="%"></div>
+          <label class="switch"><span>흐림 효과</span><input type="checkbox" data-bind="look.cardBlur"></label>
+          <label class="switch"><span>바코드 영역 표시</span><input type="checkbox" data-bind="look.code"></label>
+        </div>
+        <div class="card">
+          <div class="pane-title">상단바</div>
+          <label class="switch"><span>상단바 표시</span><input type="checkbox" data-bind="look.topbar"></label>
+          <div class="field"><label>상단바 제목</label>
+            <input class="inp" type="text" data-bind="look.topTitle" placeholder="모바일 티켓"></div>
+          <label class="switch"><span>현재 시각 표시</span><input type="checkbox" data-bind="look.topClock"></label>
+        </div>
+        <div class="card">
+          <label class="switch"><span>글자 그림자</span><input type="checkbox" data-bind="look.shadow"></label>
+          <label class="switch"><span>반짝이는 홀로그램 효과</span><input type="checkbox" data-bind="look.sheen"></label>
+        </div>
+      </section>
+
+      <!-- 저장 · 설치 -->
+      <section class="pane" data-pane="save">
+        <div class="card">
+          <div class="field"><label>이 티켓 이름</label>
+            <input class="inp" type="text" data-bind="name" placeholder="내 티켓"></div>
+          <p class="hint">입력한 내용과 사진은 이 폰 안(브라우저 저장소)에 자동으로 저장됩니다.</p>
+        </div>
+        <div class="card">
+          <div class="pane-title">백업</div>
+          <div class="btn-row">
+            <button class="btn" id="btnExport">내보내기 (.json)</button>
+            <button class="btn" id="btnImport">가져오기</button>
+          </div>
+          <input type="file" id="importInput" accept="application/json,.json" hidden>
+          <p class="hint">브라우저 데이터를 지우면 티켓도 사라집니다. 남겨 두려면 파일로 받아 두세요.</p>
+        </div>
+        <div class="card">
+          <div class="pane-title">홈 화면에 올리기</div>
+          <button class="btn btn-primary" id="btnInstall" hidden>앱 설치</button>
+          <p class="hint" id="installHint">
+            아이폰 사파리는 <b>공유 → 홈 화면에 추가</b>, 안드로이드 크롬은 <b>메뉴 → 앱 설치</b>.
+            한 번 열어 두면 인터넷이 끊겨도 그대로 열립니다.
+          </p>
+        </div>
+        <p class="hint" style="text-align:center">
+          티켓 모양을 꾸며 보는 디자인 도구입니다. 실제 입장권으로는 쓸 수 없습니다.
+        </p>
+      </section>
+
+    </div>
   </section>
 </main>
-
-<div class="mobile-bar">
-  <button class="btn btn-primary" id="btnPreviewMobile">미리보기</button>
-</div>
 
 <div class="fs" id="fs" hidden>
   <div class="fs-stage" id="fsStage"></div>
@@ -556,7 +665,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:6px}
   <div class="sheet-bd" data-close></div>
   <div class="sheet">
     <h3>티켓 관리</h3>
-    <button class="btn" id="btnRename">이름 바꾸기</button>
     <button class="btn" id="btnDup">이 티켓 복제</button>
     <button class="btn" id="btnReset">기본값으로 되돌리기</button>
     <button class="btn btn-danger" id="btnDelete">이 티켓 삭제</button>
@@ -605,16 +713,64 @@ function defaults(){
 }
 
 let state = defaults();
-let tickets = [];            // [{id,name,updated}] 목록용 요약
+let tickets = [];
 let saveTimer = null;
 
 /* ============================================================
-   2. 저장소 (IndexedDB, 실패 시 localStorage로 내려감)
+   2. 유틸
+   ============================================================ */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const isMobile = () => window.matchMedia('(max-width:900px)').matches;
+
+function getPath(o, p){ return p.split('.').reduce((a,k)=> a==null?a:a[k], o); }
+function setPath(o, p, v){
+  const ks = p.split('.'); const last = ks.pop();
+  let t = o; for(const k of ks){ if(t[k]==null||typeof t[k]!=='object') t[k]={}; t=t[k]; }
+  t[last] = v;
+}
+function merge(base, add){
+  const out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
+  if(!add || typeof add !== 'object') return out;
+  for(const k of Object.keys(add)){
+    const b = base ? base[k] : undefined, a = add[k];
+    out[k] = (b && a && typeof b==='object' && typeof a==='object' && !Array.isArray(b)) ? merge(b,a) : a;
+  }
+  return out;
+}
+function hexToRgba(hex, alphaPct){
+  const h = String(hex||'#000').replace('#','');
+  const f = h.length===3 ? h.split('').map(c=>c+c).join('') : h.padEnd(6,'0').slice(0,6);
+  const n = parseInt(f,16) || 0;
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${Math.max(0,Math.min(100,alphaPct))/100})`;
+}
+const esc = s => String(s==null?'':s);
+
+let toastTimer;
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('on'), 2200);
+}
+
+const WD = ['일','월','화','수','목','금','토'];
+const p2 = n => String(n).padStart(2,'0');
+function fmtKo(d){ return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} (${WD[d.getDay()]}) ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+function clockText(){ const d=new Date(); return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
+function hhmm(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+
+const PREF = {
+  get(k, d){ try{ const v = localStorage.getItem('mtm-'+k); return v==null?d:v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('mtm-'+k, v); }catch(e){} }
+};
+
+/* ============================================================
+   3. 저장소 (IndexedDB, 실패 시 localStorage)
    ============================================================ */
 const DB = (() => {
   const NAME='mtm', VER=1, STORE='tickets', META='meta';
   let dbp=null, broken=false;
-
   function open(){
     if(broken) return Promise.reject(new Error('idb-unavailable'));
     if(dbp) return dbp;
@@ -662,31 +818,30 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await DB.put(structuredClone(state));
+      await DB.put(JSON.parse(JSON.stringify(state)));
       await DB.setCur(state.id);
       await refreshTicketList();
-    } catch(e) {
-      LS.save();
-    }
+    } catch(e) { LS.save(); }
   }, 350);
 }
 
 async function refreshTicketList(){
   try {
     const all = await DB.all();
-    tickets = all.map(t => ({id:t.id, name:t.name, updated:t.updated||0}))
-                 .sort((a,b)=> b.updated - a.updated);
+    tickets = all.map(t => ({id:t.id, name:t.name, updated:t.updated||0})).sort((a,b)=> b.updated - a.updated);
   } catch(e) {
     tickets = [{id:state.id, name:state.name, updated:state.updated}];
   }
   const sel = $('#ticketSelect');
   sel.innerHTML = '';
+  const seen = new Set();
   for(const t of tickets){
+    seen.add(t.id);
     const o = document.createElement('option');
     o.value = t.id; o.textContent = t.name || '이름 없는 티켓';
     sel.appendChild(o);
   }
-  if(!tickets.some(t => t.id === state.id)){
+  if(!seen.has(state.id)){
     const o = document.createElement('option');
     o.value = state.id; o.textContent = state.name || '이름 없는 티켓';
     sel.appendChild(o);
@@ -695,59 +850,7 @@ async function refreshTicketList(){
 }
 
 /* ============================================================
-   3. 유틸
-   ============================================================ */
-const $  = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-
-function getPath(o, p){ return p.split('.').reduce((a,k)=> a==null?a:a[k], o); }
-function setPath(o, p, v){
-  const ks = p.split('.'); const last = ks.pop();
-  let t = o; for(const k of ks){ if(t[k]==null||typeof t[k]!=='object') t[k]={}; t=t[k]; }
-  t[last] = v;
-}
-function merge(base, add){
-  const out = Array.isArray(base) ? base.slice() : Object.assign({}, base);
-  if(!add || typeof add !== 'object') return out;
-  for(const k of Object.keys(add)){
-    const b = base ? base[k] : undefined, a = add[k];
-    out[k] = (b && a && typeof b==='object' && typeof a==='object' && !Array.isArray(b))
-      ? merge(b,a) : a;
-  }
-  return out;
-}
-function hexToRgba(hex, alphaPct){
-  const h = String(hex||'#000').replace('#','');
-  const f = h.length===3 ? h.split('').map(c=>c+c).join('') : h.padEnd(6,'0').slice(0,6);
-  const n = parseInt(f,16) || 0;
-  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${Math.max(0,Math.min(100,alphaPct))/100})`;
-}
-function esc(s){ return String(s==null?'':s); }
-
-let toastTimer;
-function toast(msg){
-  const el = $('#toast');
-  el.textContent = msg; el.classList.add('on');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> el.classList.remove('on'), 2200);
-}
-
-const WD = ['일','월','화','수','목','금','토'];
-function fmtKo(d){
-  const p = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} (${WD[d.getDay()]}) ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-function clockText(){
-  const d = new Date(), p = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-function hhmm(){
-  const d = new Date(), p = n => String(n).padStart(2,'0');
-  return `${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-/* ============================================================
-   4. 사진 불러오기 (리사이즈 + 회전 보정)
+   4. 사진 (리사이즈 + 회전 보정)
    ============================================================ */
 const MAX_DIM = 1600;
 
@@ -769,11 +872,9 @@ async function loadImage(file){
     render(); save(); syncBgUI();
     toast('사진을 넣었습니다');
   } catch(e){
-    console.error(e);
     toast('사진을 읽지 못했습니다');
   }
 }
-
 function decode(file){
   if(window.createImageBitmap){
     return createImageBitmap(file, {imageOrientation:'from-image'})
@@ -791,24 +892,20 @@ function viaImgTag(file){
     im.src = url;
   });
 }
-
 function syncBgUI(){
   const has = !!state.bg.img;
   const th = $('#bgThumb');
   th.hidden = !has;
   if(has) th.src = state.bg.img;
-  $('#bgActions').hidden = !has;
-  $('#drop').style.display = has ? 'none' : 'grid';
+  $('#btnRemoveBg').hidden = !has;
+  $('#drop').hidden = has;
+  $('#btnPickBg').textContent = has ? '다른 사진' : '앨범에서';
 }
 
 /* ============================================================
    5. 렌더링
    ============================================================ */
-const T = {
-  ticket:null, bg:null, veil:null, sheen:null, top:null, topTitle:null, topTime:null,
-  badge:null, title:null, sub:null, card:null, rows:null, bars:null, codeNo:null,
-  mq:null, track:null
-};
+const T = {};
 function cacheNodes(){
   T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
   T.top=$('#tkTop'); T.topTitle=$('#tkTopTitle'); T.topTime=$('#tkTopTime');
@@ -820,7 +917,6 @@ function cacheNodes(){
 function render(){
   const {bg, info, look} = state;
 
-  /* 배경 */
   if(bg.img){
     T.bg.classList.add('has-img');
     T.bg.style.setProperty('--tk-img', `url("${bg.img}")`);
@@ -838,42 +934,33 @@ function render(){
 
   const dim = `rgba(0,0,0,${bg.dim/100})`;
   T.veil.style.background = bg.gradient
-    ? `linear-gradient(180deg, rgba(0,0,0,${Math.min(0.75, bg.dim/100 + .12)}) 0%, ${dim} 32%, rgba(0,0,0,${Math.min(0.9, bg.dim/100 + .4)}) 100%)`
+    ? `linear-gradient(180deg, rgba(0,0,0,${Math.min(.75, bg.dim/100 + .12)}) 0%, ${dim} 32%, rgba(0,0,0,${Math.min(.9, bg.dim/100 + .4)}) 100%)`
     : dim;
 
   T.sheen.classList.toggle('on', !!look.sheen);
 
-  /* 테마 */
   T.ticket.style.setProperty('--tk-accent', look.accent);
   T.ticket.style.color = look.text;
   T.ticket.style.fontFamily = FONTS[look.font] || FONTS.sans;
   T.ticket.style.textShadow = look.shadow ? '0 2px 14px rgba(0,0,0,.6)' : 'none';
 
-  /* 상단바 */
   T.ticket.classList.toggle('no-top', !look.topbar);
   T.top.style.display = look.topbar ? 'flex' : 'none';
   T.topTitle.textContent = look.topTitle || '';
   T.topTime.textContent = look.topClock ? hhmm() : '';
 
-  /* 머리글 */
   T.badge.textContent = info.badge || '';
   T.title.textContent = info.title || '';
   T.title.style.fontSize = look.titleSize + 'px';
   T.sub.textContent = info.sub || '';
 
-  /* 정보 카드 */
   T.card.style.background = `rgba(10,12,18,${look.cardAlpha/100})`;
   T.card.classList.toggle('blur', !!look.cardBlur);
   T.card.classList.toggle('hide-code', !look.code);
 
   const rows = [
-    ['일시',   info.date],
-    ['장소',   info.place],
-    ['좌석',   info.seat],
-    ['매수',   info.count],
-    ['예매번호', info.no],
-    ['예매자', info.holder],
-    [info.exLabel, info.exValue]
+    ['일시', info.date], ['장소', info.place], ['좌석', info.seat], ['매수', info.count],
+    ['예매번호', info.no], ['예매자', info.holder], [info.exLabel, info.exValue]
   ].filter(r => esc(r[0]).trim() && esc(r[1]).trim());
 
   T.rows.innerHTML = '';
@@ -891,7 +978,6 @@ function render(){
   styleMarquee();
 }
 
-/* ---- 바코드 모양 (장식용 패턴) ---- */
 function drawBars(){
   const cv = T.bars;
   const w = Math.max(120, Math.round(cv.offsetWidth || cv.getBoundingClientRect().width || 300));
@@ -902,7 +988,6 @@ function drawBars(){
   }
   const cx = cv.getContext('2d');
   cx.setTransform(dpr,0,0,dpr,0,0);
-  cx.clearRect(0,0,w,h);
   cx.fillStyle = '#fff'; cx.fillRect(0,0,w,h);
 
   const seed = String(state.info.no || state.info.title || 'TICKET');
@@ -922,14 +1007,10 @@ function drawBars(){
 /* ============================================================
    6. 흐르는 글자
    ============================================================ */
-function marqueeUnitText(){
-  const t = (state.mq.text || '').trim();
-  return t || ' ';
-}
 function buildMarquee(){
   const m = state.mq;
   const track = T.track;
-  // 폰 프레임은 CSS transform 으로 줄여 놓아서, 잰 값을 배율로 되돌려야
+  // 데스크톱 폰 프레임은 CSS transform 으로 줄여 놓았다. 잰 값을 배율로 되돌려야
   // 미리보기와 전체화면의 흐르는 속도가 같아진다.
   const rect = T.mq.getBoundingClientRect();
   const scale = T.mq.offsetWidth > 0 ? (rect.width / T.mq.offsetWidth) : 1;
@@ -938,11 +1019,11 @@ function buildMarquee(){
   const makeUnit = () => {
     const u = document.createElement('span'); u.className = 'mq-unit';
     const txt = document.createElement('span');
-    txt.textContent = marqueeUnitText();
+    txt.textContent = (m.text || '').trim() || ' ';
     u.appendChild(txt);
     if(m.clock){
       const sp = document.createElement('span'); sp.className='mq-sep';
-      sp.textContent = ' ' + (m.sep || '  •  ').trim() + ' ';
+      sp.textContent = ' ' + (m.sep || '•').trim() + ' ';
       const ck = document.createElement('span'); ck.className='mq-clock';
       ck.textContent = clockText();
       u.append(sp, ck);
@@ -965,8 +1046,7 @@ function buildMarquee(){
   track.innerHTML = '';
   track.append(half, half.cloneNode(true));
 
-  const halfW = Math.max(1, half.getBoundingClientRect().width / (scale || 1));
-  track.dataset.halfw = String(halfW);
+  track.dataset.halfw = String(Math.max(1, half.getBoundingClientRect().width / (scale || 1)));
   applySpeed();
 }
 
@@ -981,8 +1061,8 @@ function applySpeed(){
 function styleMarquee(){
   const m = state.mq;
   T.mq.style.background = hexToRgba(m.bg, m.bgAlpha);
-  T.mq.style.padding = `${m.pad}px 0`;
-  T.mq.style.paddingBottom = `calc(${m.pad}px + env(safe-area-inset-bottom,0px))`;
+  T.mq.style.paddingTop = m.pad + 'px';
+  T.mq.style.paddingBottom = `calc(${m.pad}px + var(--tk-inset-bot))`;
   T.track.style.color = m.color;
   T.track.style.fontFamily = FONTS[m.font] || FONTS.sans;
   T.track.style.fontSize = m.size + 'px';
@@ -993,25 +1073,14 @@ function styleMarquee(){
   applySpeed();
 }
 
-/* 1초마다 시계만 갈아끼운다 (애니메이션은 끊기지 않음) */
 setInterval(() => {
+  if(!T.track) return;
   if(state.mq.clock){
     const t = clockText();
     for(const el of T.track.querySelectorAll('.mq-clock')) el.textContent = t;
   }
   if(state.look.topClock) T.topTime.textContent = hhmm();
 }, 1000);
-
-/* 폭이 바뀌면 다시 깔아 준다 */
-let roTimer = null;
-if(window.ResizeObserver){
-  const ro = new ResizeObserver(() => {
-    clearTimeout(roTimer);
-    roTimer = setTimeout(() => { buildMarquee(); if(state.look.code) drawBars(); }, 120);
-  });
-  ro.observe(document.getElementById('tkMarquee'));
-  ro.observe(document.getElementById('tkBars'));
-}
 
 /* ============================================================
    7. 폼 ↔ 상태
@@ -1037,10 +1106,8 @@ function updateVal(path){
   const out = document.querySelector(`[data-val="${path}"]`);
   if(!out) return;
   const src = document.querySelector(`[data-bind="${path}"]`);
-  const unit = src ? (src.dataset.unit || '') : '';
-  out.textContent = getPath(state, path) + unit;
+  out.textContent = getPath(state, path) + (src ? (src.dataset.unit || '') : '');
 }
-
 function bindForm(){
   for(const el of $$('[data-bind]')){
     const ev = (el.type === 'checkbox' || el.type === 'radio' || el.tagName === 'SELECT') ? 'change' : 'input';
@@ -1049,6 +1116,7 @@ function bindForm(){
       if(el.type === 'radio' && !el.checked) return;
       setPath(state, path, readEl(el));
       updateVal(path);
+      if(path === 'name'){ refreshTicketList(); save(); return; }
       // 글꼴·크기가 먼저 반영돼야 띠 너비를 제대로 잰다 → render 다음에 다시 깐다
       render();
       if(REBUILD.has(path)) buildMarquee();
@@ -1060,6 +1128,9 @@ function bindForm(){
 /* ============================================================
    8. 티켓 관리
    ============================================================ */
+function afterLoad(){
+  fillForm(); render(); buildMarquee(); refreshTicketList();
+}
 async function loadTicket(id){
   try {
     const rec = await DB.get(id);
@@ -1067,15 +1138,16 @@ async function loadTicket(id){
   } catch(e){}
   afterLoad();
 }
-function afterLoad(){
-  fillForm(); render(); buildMarquee();
-  refreshTicketList();
-}
 async function newTicket(base){
   const d = defaults();
-  state = base ? merge(d, Object.assign({}, structuredClone(base), {id:d.id, name:(base.name||'티켓')+' 사본'})) : d;
-  state.id = state.id || d.id;
-  if(!base) state.name = '내 티켓 ' + (tickets.length + 1);
+  if(base){
+    state = merge(d, JSON.parse(JSON.stringify(base)));
+    state.id = d.id;
+    state.name = (base.name || '티켓') + ' 사본';
+  } else {
+    state = d;
+    state.name = '내 티켓 ' + (tickets.length + 1);
+  }
   afterLoad(); save();
   toast(base ? '티켓을 복제했습니다' : '새 티켓을 만들었습니다');
 }
@@ -1088,18 +1160,14 @@ let wakeLock = null, ctrlTimer = null;
 async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
-  document.body.style.overflow = 'hidden';
   buildMarquee();
   if(state.look.code) drawBars();
   hideCtrlSoon();
-  try {
-    if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-  } catch(e){}
+  try { if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 }
 function closePreview(){
   $('#phoneScreen').appendChild(T.ticket);
   $('#fs').hidden = true;
-  document.body.style.overflow = '';
   $('#fsCtrl').classList.remove('dim');
   clearTimeout(ctrlTimer);
   buildMarquee();
@@ -1116,59 +1184,105 @@ function hideCtrlSoon(){
    10. 내보내기 / 가져오기
    ============================================================ */
 function exportJson(){
-  const data = JSON.stringify(state, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = (state.name || 'ticket').replace(/[\\/:*?"<>|]/g,'_') + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=> URL.revokeObjectURL(a.href), 2000);
-  toast('설정 파일을 내려받았습니다');
+  toast('파일로 내보냈습니다');
 }
 async function importJson(file){
   try {
-    const txt = await file.text();
-    const obj = JSON.parse(txt);
+    const obj = JSON.parse(await file.text());
     if(!obj || typeof obj !== 'object') throw new Error('bad');
     const d = defaults();
     state = merge(d, obj);
     state.id = d.id;
-    state.name = (obj.name || '가져온 티켓');
+    state.name = obj.name || '가져온 티켓';
     afterLoad(); save();
-    toast('설정을 가져왔습니다');
-  } catch(e){
-    toast('가져오지 못했습니다 (파일 형식 확인)');
-  }
+    toast('가져왔습니다');
+  } catch(e){ toast('가져오지 못했습니다 (파일 형식 확인)'); }
 }
 
 /* ============================================================
-   11. 이벤트 연결
+   11. 탭 · 미리보기 높이
+   ============================================================ */
+function wireTabs(){
+  const tabs = $$('#tabs button');
+  const show = key => {
+    for(const b of tabs) b.setAttribute('aria-selected', String(b.dataset.tab === key));
+    for(const p of $$('.pane')) p.classList.toggle('on', p.dataset.pane === key);
+    $('#panes').scrollTop = 0;
+    PREF.set('tab', key);
+  };
+  for(const b of tabs) b.addEventListener('click', ()=> show(b.dataset.tab));
+  show(PREF.get('tab','photo'));
+}
+
+function setStageFrac(f){
+  const v = Math.min(0.78, Math.max(0.18, f));
+  document.documentElement.style.setProperty('--stage-h', (v*100).toFixed(1) + 'dvh');
+  PREF.set('stage', v.toFixed(3));
+}
+function wireGrip(){
+  const grip = $('#grip'), stage = $('#stage');
+  let startY = 0, startH = 0, on = false;
+  grip.addEventListener('pointerdown', e => {
+    if(e.target.closest('.grip-btn')) return;      // 버튼 누를 때는 끌기로 보지 않는다
+    on = true; startY = e.clientY; startH = stage.getBoundingClientRect().height;
+    grip.setPointerCapture(e.pointerId);
+  });
+  grip.addEventListener('pointermove', e => {
+    if(!on) return;
+    e.preventDefault();
+    setStageFrac((startH + (e.clientY - startY)) / window.innerHeight);
+  });
+  const end = e => { if(!on) return; on = false; try{ grip.releasePointerCapture(e.pointerId); }catch(err){} };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+  grip.addEventListener('dblclick', ()=> setStageFrac(0.44));
+  setStageFrac(Number(PREF.get('stage', 0.44)));
+}
+
+/* 전체화면에서 아래로 쓸어내리면 닫기 */
+function wireSwipeClose(){
+  const el = $('#fsStage');
+  let y0 = null, x0 = null;
+  el.addEventListener('touchstart', e => {
+    if(e.touches.length !== 1) return;
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX;
+  }, {passive:true});
+  el.addEventListener('touchend', e => {
+    if(y0 == null) return;
+    const t = e.changedTouches[0];
+    const dy = t.clientY - y0, dx = Math.abs(t.clientX - x0);
+    y0 = null;
+    if(dy > 90 && dx < 70) closePreview();
+  }, {passive:true});
+}
+
+/* ============================================================
+   12. 이벤트 연결
    ============================================================ */
 function wire(){
-  /* 사진 */
-  const fi = $('#fileInput');
-  $('#drop').addEventListener('click', ()=> fi.click());
-  $('#btnChangeBg').addEventListener('click', ()=> fi.click());
-  fi.addEventListener('change', ()=> { if(fi.files[0]) loadImage(fi.files[0]); fi.value=''; });
+  const fi = $('#fileInput'), ci = $('#camInput');
+  const pick = inp => { inp.value=''; inp.click(); };
+  $('#drop').addEventListener('click', ()=> pick(fi));
+  $('#btnPickBg').addEventListener('click', ()=> pick(fi));
+  $('#btnCamBg').addEventListener('click', ()=> pick(ci));
+  for(const inp of [fi, ci]) inp.addEventListener('change', ()=> { if(inp.files[0]) loadImage(inp.files[0]); });
   $('#btnRemoveBg').addEventListener('click', ()=> {
     state.bg.img = null; render(); save(); syncBgUI(); toast('사진을 제거했습니다');
   });
+
   const drop = $('#drop');
   for(const ev of ['dragenter','dragover']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); });
   for(const ev of ['dragleave','drop'])     drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); });
-  drop.addEventListener('drop', e => {
-    e.stopPropagation();
-    const f = e.dataTransfer && e.dataTransfer.files[0];
-    if(f) loadImage(f);
-  });
+  drop.addEventListener('drop', e => { e.stopPropagation(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadImage(f); });
   window.addEventListener('dragover', e => e.preventDefault());
-  window.addEventListener('drop', e => {
-    e.preventDefault();
-    const f = e.dataTransfer && e.dataTransfer.files[0];
-    if(f) loadImage(f);
-  });
+  window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadImage(f); });
 
-  /* 날짜 채우기 */
   $('#btnDtFill').addEventListener('click', ()=> {
     const v = $('#dtPick').value;
     const d = v ? new Date(v) : new Date();
@@ -1177,19 +1291,12 @@ function wire(){
     fillForm(); render(); save();
   });
 
-  /* 티켓 목록 */
   $('#ticketSelect').addEventListener('change', e => loadTicket(e.target.value));
   $('#btnNew').addEventListener('click', ()=> newTicket(null));
 
-  /* 더보기 시트 */
   const sheet = $('#sheet');
   $('#btnMenu').addEventListener('click', ()=> sheet.classList.add('on'));
   for(const el of $$('[data-close]')) el.addEventListener('click', ()=> sheet.classList.remove('on'));
-  $('#btnRename').addEventListener('click', ()=> {
-    sheet.classList.remove('on');
-    const v = prompt('티켓 이름', state.name);
-    if(v != null){ state.name = v.trim() || state.name; save(); refreshTicketList(); }
-  });
   $('#btnDup').addEventListener('click', ()=> { sheet.classList.remove('on'); newTicket(state); });
   $('#btnReset').addEventListener('click', ()=> {
     sheet.classList.remove('on');
@@ -1209,45 +1316,56 @@ function wire(){
     toast('삭제했습니다');
   });
 
-  /* 미리보기 */
-  $('#btnPreviewMobile').addEventListener('click', openPreview);
-  $('#btnPreviewDesktop').addEventListener('click', openPreview);
+  $('#btnPreview').addEventListener('click', openPreview);
+  $('#btnPreview2').addEventListener('click', openPreview);
+  $('#stage').addEventListener('click', ()=> { if(isMobile()) openPreview(); });
   $('#btnFsClose').addEventListener('click', closePreview);
   $('#btnFsFull').addEventListener('click', ()=> {
     const el = $('#fs');
     if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     else if(el.requestFullscreen) el.requestFullscreen().catch(()=> toast('이 브라우저에서는 전체화면을 쓸 수 없습니다'));
+    else toast('이 브라우저에서는 전체화면을 쓸 수 없습니다');
   });
   $('#fsStage').addEventListener('click', ()=> {
     const c = $('#fsCtrl');
     if(c.classList.contains('dim')){ c.classList.remove('dim'); hideCtrlSoon(); }
     else c.classList.add('dim');
   });
-  document.addEventListener('keydown', e => {
-    if(e.key === 'Escape' && !$('#fs').hidden) closePreview();
-  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#fs').hidden) closePreview(); });
 
-  /* 내보내기 / 가져오기 */
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
-  $('#btnImport').addEventListener('click', ()=> ii.click());
-  ii.addEventListener('change', ()=> { if(ii.files[0]) importJson(ii.files[0]); ii.value=''; });
+  $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
+  ii.addEventListener('change', ()=> { if(ii.files[0]) importJson(ii.files[0]); });
 
-  /* 창 크기 → 폰 프레임 축소 */
   const fit = () => {
     const ph = $('#phone');
     if(!ph) return;
-    const avail = window.innerHeight - 55 - 90;
+    if(isMobile()){ ph.style.transform=''; ph.style.marginBottom=''; return; }
+    const avail = window.innerHeight - 52 - 96;
     const s = Math.min(1, Math.max(0.42, avail / 866));
     ph.style.transform = `scale(${s.toFixed(3)})`;
     ph.style.marginBottom = `${Math.round(-866 * (1 - s))}px`;
   };
   window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', ()=> setTimeout(()=>{ fit(); buildMarquee(); }, 250));
   fit();
 }
 
+/* 폭이 바뀌면 흐르는 글자를 다시 깐다 */
+let roTimer = null;
+function wireObservers(){
+  if(!window.ResizeObserver) return;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(roTimer);
+    roTimer = setTimeout(() => { buildMarquee(); if(state.look.code) drawBars(); }, 120);
+  });
+  ro.observe(T.mq);
+  ro.observe(T.bars);
+}
+
 /* ============================================================
-   12. 설치 / 서비스워커
+   13. 설치 / 서비스워커
    ============================================================ */
 let installEvent = null;
 window.addEventListener('beforeinstallprompt', e => {
@@ -1262,18 +1380,20 @@ window.addEventListener('beforeinstallprompt', e => {
 window.addEventListener('appinstalled', ()=> { $('#btnInstall').hidden = true; toast('홈 화면에 설치했습니다'); });
 
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
-  window.addEventListener('load', ()=> {
-    navigator.serviceWorker.register('sw.js', {scope:'./'}).catch(()=>{});
-  });
+  window.addEventListener('load', ()=> { navigator.serviceWorker.register('sw.js', {scope:'./'}).catch(()=>{}); });
 }
 
 /* ============================================================
-   13. 시작
+   14. 시작
    ============================================================ */
 (async function init(){
   cacheNodes();
   bindForm();
+  wireTabs();
+  wireGrip();
+  wireSwipeClose();
   wire();
+  wireObservers();
 
   let loaded = false;
   try {
