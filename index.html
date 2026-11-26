@@ -11,7 +11,9 @@
      아래의 black-translucent 가 들으려면 theme-color 가 없어야 한다. manifest 에도 두지 않는다. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- default = 흰 바탕에 검은 글씨. black-translucent 로 화면 전체를 받으려 해 봤으나
+     아이폰이 상단 47px 을 끝내 내주지 않았다(아이폰13). 그래서 그 띠를 흰색으로 칠하게 둔다. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="티켓 메이커">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="icon" href="assets/icon-192.png">
@@ -201,11 +203,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
      -webkit-touch-callout 은 상속되므로 티켓 전체에 한 번만 꺼 둔다. */
   -webkit-touch-callout:none;
   -webkit-user-select:none;user-select:none;
+  --tk-safe-b:0px;                    /* 아래 홈 인디케이터 자리 (흰 띠) */
 }
+/* 사진이 들어가는 칸. 아래 안전영역만큼은 비워 두고 흰 띠가 들어간다 */
 .tk-bg{
-  position:absolute;inset:0;z-index:0;overflow:hidden;background-color:#0d0f14;
+  position:absolute;inset:0 0 var(--tk-safe-b) 0;z-index:0;overflow:hidden;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
 }
+.tk-safe-bot{position:absolute;left:0;right:0;bottom:0;height:var(--tk-safe-b);z-index:1;background:#fff}
 .tk-bg.has-img{background-image:none}
 /* 사진은 img 로 올려 두고 transform 으로 움직인다. 끌기·확대가 부드럽고 계산도 단순하다.
    손가락은 사진이 아니라 그 아래 칸이 받는다(pointer-events:none) — 길게 누를 때 OS가
@@ -360,6 +365,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 
         <div class="ticket" id="ticket">
           <div class="tk-bg" id="tkBg"><img class="tk-img" id="tkImg" alt="" hidden></div>
+          <div class="tk-safe-bot" id="tkSafeBot"></div>
           <div class="tk-veil" id="tkVeil"></div>
           <img class="tk-ov" id="tkOv" alt="" hidden>
           <div class="tk-sheen" id="tkSheen"></div>
@@ -419,6 +425,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
               <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
               <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
             </div>
+            <label class="switch"><span>기기 안전영역에 맞추기</span>
+              <input type="checkbox" data-bind="bg.safeFit"></label>
+            <p class="hint" id="safeNote"></p>
             <p class="hint" id="fitNote" hidden></p>
             <p class="hint">셋 다 가로세로 비율은 그대로 둡니다. <b>채우기</b>는 빈 곳이 생기지 않게 채우고,
               <b>가로 맞춤</b>은 좌우를 한 번도 자르지 않습니다. <b>전체 보기</b>는 사진 전체를 넣습니다.</p>
@@ -630,7 +639,8 @@ function defaults(){
     v: 8,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
-    bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
+    bg: { img:null, w:0, h:0, fit:'cover', safeFit:true, posX:50, posY:50, zoom:100,
+          dim:0, blur:0, gray:0, gradient:false },
     /* 배경 위에 겹쳐 올리는 사진. 가로는 늘 가운데, 회전 없음.
        y 는 사진 가운데가 놓이는 높이(%), scale 은 티켓 폭 대비 너비(%) */
     ov: { img:null, w:0, h:0, y:50, scale:45, opacity:100, round:0, shadow:false },
@@ -955,21 +965,46 @@ function syncPhotoUI(){
 /* ============================================================
    5. 렌더링
    ============================================================ */
+/* 이 기기의 안전영역. 아이폰13 은 위 47 / 아래 34 다.
+   사진을 '폰 화면을 통째로 찍은 것'으로 보고 이만큼 잘라 내면,
+   남는 높이가 기기가 내준 칸과 꼭 맞아 1:1 로 떨어진다. */
+let SAFE_T = 0, SAFE_B = 0, SCREEN_H = 0;
+function readSafeInsets(){
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;' +
+      'padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    SAFE_T = Math.round(parseFloat(cs.paddingTop) || 0);
+    SAFE_B = Math.round(parseFloat(cs.paddingBottom) || 0);
+    probe.remove();
+  } catch(e){ SAFE_T = SAFE_B = 0; }
+  SCREEN_H = Math.round(screen.height || 0);
+}
+const safeOn = () => !!state.bg.safeFit && SCREEN_H > 0 && (SAFE_T + SAFE_B) > 0;
+
 const T = {};
 function cacheNodes(){
   T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.ov=$('#tkOv');
-  T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
+  T.veil=$('#tkVeil'); T.sheen=$('#tkSheen'); T.safeBot=$('#tkSafeBot');
   T.mq=$('#tkMarquee'); T.track=$('#mqTrack');
 }
 
 function render(){
   const {bg, look} = state;
 
+  // 아래 안전영역은 흰 띠로 비워 둔다 (상태표시줄은 기기가 흰색으로 칠한다)
+  const sb = safeOn() ? SAFE_B : 0;
+  T.ticket.style.setProperty('--tk-safe-b', sb + 'px');
+  T.safeBot.hidden = sb <= 0;
+
   T.bg.classList.toggle('has-img', !!bg.img);
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
   layoutBg();
   layoutOv();
   updateFitNote();
+  updateSafeNote();
 
   const dim = `rgba(0,0,0,${bg.dim/100})`;
   T.veil.style.background = bg.gradient
@@ -987,6 +1022,18 @@ function bgGeom(boxW, boxH){
   const b = state.bg;
   const nw = b.w || T.img.naturalWidth, nh = b.h || T.img.naturalHeight;
   if(!nw || !nh || !boxW || !boxH) return null;
+  /* 안전영역 맞춤: 사진을 '폰 화면 전체를 찍은 것'으로 보고 가로폭에 맞춘 뒤,
+     위 SAFE_T·아래 SAFE_B 만큼 잘라 낸다. 남는 높이가 칸과 꼭 맞아 1:1 로 떨어진다.
+     화면 비율과 많이 다른 사진(카메라 사진 등)에는 적용하지 않는다. */
+  if(safeOn()){
+    const s0 = boxW / nw, dh0 = nh * s0;
+    if(Math.abs(dh0 / SCREEN_H - 1) < 0.15){
+      const cut = SAFE_T * (dh0 / SCREEN_H);      // 사진 위에서 잘라 낼 만큼
+      return { nw, nh, s:s0, dw:nw * s0, dh:dh0, maxX:0, maxY:0,
+               tx:0, ty: -cut - (boxH - dh0) / 2 };
+    }
+  }
+
   /* 셋 다 가로세로 비율은 그대로 둔다. 무엇을 기준으로 키우냐만 다르다.
      width  — 가로폭에 딱 맞춘다. 좌우가 절대 잘리지 않고, 배율이 화면 높이와 무관해져서
               작은 미리보기·전체화면·내보낸 그림에서 사진이 똑같은 크기로 그려진다.
@@ -1007,6 +1054,22 @@ function bgGeom(boxW, boxH){
 
 /* 이 사진이 화면 비율과 얼마나 다른지, 그래서 무엇이 잘리거나 비는지 미리 알려 준다.
    "왜 딱 안 맞지?" 가 눈에 보이지 않는 기하학이라서 글로 적어 준다. */
+/* 지금 기기의 안전영역이 얼마이고 사진을 어떻게 자르는지 적어 준다 */
+function updateSafeNote(){
+  const el = document.getElementById('safeNote');
+  if(!el) return;
+  if(!state.bg.safeFit){
+    el.textContent = '끄면 사진을 화면 가득 채웁니다. 상태표시줄·홈 인디케이터 자리와 겹칩니다.';
+    return;
+  }
+  if(SAFE_T + SAFE_B <= 0){
+    el.textContent = '이 기기에는 안전영역이 없어 그대로 채웁니다. 아이폰에서 열면 적용됩니다.';
+    return;
+  }
+  el.innerHTML = `폰 화면을 찍은 사진으로 보고 <b>위 ${SAFE_T}px · 아래 ${SAFE_B}px</b> 을 잘라
+    그 사이에 1:1 로 넣습니다. 위는 기기의 상태표시줄, 아래 ${SAFE_B}px 은 흰 띠가 됩니다.`;
+}
+
 function updateFitNote(){
   const el = document.getElementById('fitNote');
   if(!el) return;
@@ -1243,7 +1306,7 @@ function styleMarquee(){
   T.track.style.setProperty('--mq-gap', (Number(m.gap) || 0) + 'px');
   T.mq.style.background = hexToRgba(m.bg, m.bgAlpha);
   const lift = Math.max(MQ_LIFT_MIN, Math.min(MQ_LIFT_MAX, Number(m.lift) || 0));
-  T.mq.style.bottom = lift + '%';
+  T.mq.style.bottom = `calc(${lift}% + var(--tk-safe-b))`;
   // 위아래 여백은 같다. 홈 인디케이터 자리를 따로 비우지 않는다 —
   // 그만큼 글자 아래에 빈 공간이 남아 띠가 바닥에 붙지 않는 것처럼 보였다.
   T.mq.style.paddingTop = m.pad + 'px';
@@ -1465,10 +1528,14 @@ function pathRound(cx, x, y, w, h, r){
 
 function paintBackdrop(cx){
   const b = state.bg, look = state.look;
+  const safeB = safeOn() ? SAFE_B : 0;
+  const CH = EX_H - safeB;                  // 사진이 들어가는 칸의 높이
+  cx.save();
+  cx.beginPath(); cx.rect(0, 0, EX_W, CH); cx.clip();
   cx.fillStyle = '#0d0f14';
-  cx.fillRect(0, 0, EX_W, EX_H);
+  cx.fillRect(0, 0, EX_W, CH);
 
-  const g = (b.img && T.img.complete && T.img.naturalWidth) ? bgGeom(EX_W, EX_H) : null;
+  const g = (b.img && T.img.complete && T.img.naturalWidth) ? bgGeom(EX_W, CH) : null;
   if(g){
     const k = b.blur > 0 ? (1 + b.blur/90) : 1;
     const dw = g.dw * k, dh = g.dh * k;
@@ -1477,26 +1544,32 @@ function paintBackdrop(cx){
     const prev = canFilter ? (cx.filter || 'none') : 'none';
     const mine = (b.blur || b.gray) ? `blur(${b.blur}px) grayscale(${b.gray}%)` : '';
     if(canFilter && mine) cx.filter = (prev !== 'none' ? prev + ' ' : '') + mine;
-    cx.drawImage(T.img, EX_W/2 - dw/2 + g.tx, EX_H/2 - dh/2 + g.ty, dw, dh);
+    cx.drawImage(T.img, EX_W/2 - dw/2 + g.tx, CH/2 - dh/2 + g.ty, dw, dh);
     if(canFilter) cx.filter = prev;
   } else {
-    const lg = cx.createLinearGradient(0, 0, EX_W * 0.8, EX_H);
+    const lg = cx.createLinearGradient(0, 0, EX_W * 0.8, CH);
     lg.addColorStop(0, '#2a1d3f'); lg.addColorStop(.45, '#121a2e'); lg.addColorStop(1, '#0d0f14');
-    cx.fillStyle = lg; cx.fillRect(0, 0, EX_W, EX_H);
+    cx.fillStyle = lg; cx.fillRect(0, 0, EX_W, CH);
   }
 
   if(b.gradient){
-    const vg = cx.createLinearGradient(0, 0, 0, EX_H);
+    const vg = cx.createLinearGradient(0, 0, 0, CH);
     vg.addColorStop(0, `rgba(0,0,0,${Math.min(.75, b.dim/100 + .12)})`);
     vg.addColorStop(.32, `rgba(0,0,0,${b.dim/100})`);
     vg.addColorStop(1, `rgba(0,0,0,${Math.min(.9, b.dim/100 + .4)})`);
-    cx.fillStyle = vg; cx.fillRect(0, 0, EX_W, EX_H);
+    cx.fillStyle = vg; cx.fillRect(0, 0, EX_W, CH);
   } else if(b.dim > 0){
     cx.fillStyle = `rgba(0,0,0,${b.dim/100})`;
-    cx.fillRect(0, 0, EX_W, EX_H);
+    cx.fillRect(0, 0, EX_W, CH);
   }
-  /* 겹친 사진도 배경의 일부다. 여기서 그려야 정보 카드의 흐림에도 같이 비친다 */
+  /* 겹친 사진도 배경의 일부다 */
   drawOverlay(cx);
+  cx.restore();
+
+  if(safeB > 0){                            // 아래 안전영역은 흰 띠
+    cx.fillStyle = '#ffffff';
+    cx.fillRect(0, CH, EX_W, safeB);
+  }
   void look;
 }
 
@@ -1750,7 +1823,9 @@ function wire(){
   updateInstallState();
   syncExportSize();
   updateScreenInfo();
-  window.addEventListener('resize', ()=> { syncExportSize(); updateScreenInfo(); updateFitNote(); });
+  window.addEventListener('resize', ()=> {
+    readSafeInsets(); syncExportSize(); updateScreenInfo(); render();
+  });
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
   $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
@@ -1902,6 +1977,7 @@ async function hardRefresh(){
    14. 시작
    ============================================================ */
 (async function init(){
+  readSafeInsets();
   cacheNodes();
   bindForm();
   wireTabs();

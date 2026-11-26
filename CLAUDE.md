@@ -80,11 +80,14 @@
   manifest 의 `display`·`theme_color` 와 `apple-mobile-web-app-status-bar-style` 이 정하는데,
   **이 값들은 홈 화면에 올리는 그 순간에만 읽힌다.** 고쳐 놓고 "왜 그대로죠" 하게 되므로
   반드시 **아이콘을 지우고 다시 올리라고** 안내할 것. 앱 안에도 적어 뒀다.
-  **`theme-color` 를 두지 말 것 — HTML `<meta>` 도, manifest 도.** 이 값이 있으면 아이폰이
-  홈 화면 앱에 불투명 상태표시줄을 씌우고 그만큼 화면을 덜 내준다
-  (아이폰13: 844 중 797 만 받았고 모자란 47px 이 `safe-area-inset-top` 과 같았다).
-  정석 조합은 `display: standalone` + `apple-mobile-web-app-capable: yes`
-  + `apple-mobile-web-app-status-bar-style: black-translucent` + `viewport-fit=cover`, theme-color 없음.
+  **아이폰13 에서 끝내 상단 47px 을 받지 못했다.** `black-translucent`, `viewport-fit=cover`,
+  manifest `theme_color` 제거, HTML `theme-color` 제거, `display` 를 fullscreen/standalone 양쪽으로
+  — 전부 해 보고 매번 재설치했지만 844 중 797 이었다(2026-11-27). **더 시도하지 말 것.**
+  대신 **그 띠를 흰색으로 칠하게** 두었다(`apple-mobile-web-app-status-bar-style: default`).
+- **안전영역 맞춤(`bg.safeFit`, 기본 켜짐).** 받은 칸이 797 이고 아래 34px 은 흰 띠로 비우므로
+  사진 칸은 **763px**. 사진을 '폰 화면 전체 캡처'로 보고 가로폭에 맞춘 뒤 위 `SAFE_T`·아래 `SAFE_B`
+  만큼 잘라 내면 남는 높이가 763 과 꼭 맞아 **1:1 로 떨어진다**. 화면 비율과 15% 넘게 다른 사진에는
+  적용하지 않는다(카메라 사진이 엉뚱하게 잘린다). 이 모드에서는 `maxX/maxY` 가 0 이라 끌기가 없다 — 의도한 것.
 - **`window.innerHeight` 로 판단하지 말 것.** 아이폰에서 상태표시줄을 뺀 값을 주는 일이 있다.
   `position:fixed; inset:0` 한 칸을 실제로 재야 '못 받은 것'과 '받았는데 덮인 것'이 갈린다.
 - `updateScreenInfo()` 는 〈기기 화면 / 앱이 받은 화면 / 안전영역〉을 저장 탭에 찍는다.
