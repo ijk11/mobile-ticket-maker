@@ -161,6 +161,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .drop.over{border-color:var(--accent);background:#20141a}
 .drop b{font-size:15px}
 .thumb{width:100%;height:130px;border-radius:var(--r-sm);object-fit:cover;background:#000;border:1px solid var(--line)}
+.thumb.fit{object-fit:contain;background:#14161d}
+.stack{display:grid;gap:13px}
 
 /* ===== 폰 프레임 (데스크톱) ===== */
 .phone{
@@ -208,6 +210,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 }
 .tk-img[hidden]{display:none}
 .tk-veil{position:absolute;inset:0;z-index:1;pointer-events:none}
+/* 배경 위에 겹쳐 올리는 사진. 어둡게/흐림(veil) 보다 위에 있어서 또렷하게 남는다.
+   위치와 크기를 % 로 잡아 두면 미리보기와 내보낸 그림의 비율이 저절로 같아진다 */
+.tk-ov{
+  position:absolute;z-index:2;display:block;height:auto;max-width:none;
+  transform-origin:center center;pointer-events:none;user-select:none;-webkit-user-drag:none;
+}
+.tk-ov[hidden]{display:none}
 .tk-sheen{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;mix-blend-mode:screen}
 .tk-sheen.on{
   opacity:.5;
@@ -273,12 +282,15 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .mq-track{display:flex;width:max-content;will-change:transform;animation:mq linear infinite}
 @keyframes mq{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 .mq-half{display:flex;flex:0 0 auto}
-.mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto}
-.mq-sep{opacity:.55}
-.mq-clock{font-variant-numeric:tabular-nums}
+/* 반복 사이의 간격. em 으로 둬서 글자 크기를 바꿔도 비율이 유지되고,
+   내보낸 그림(캔버스)도 같은 식으로 띄운다 */
+.mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto;padding-right:var(--mq-gap,1.6em)}
 
 /* ===== 전체화면 미리보기 ===== */
-.fs{position:fixed;inset:0;z-index:200;background:#000;display:flex}
+/* 기기의 상태표시줄/홈바 자리는 브라우저가 theme-color 와 페이지 배경으로 칠한다.
+   전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다 (openPreview 가 함께 바꾼다) */
+.fs{position:fixed;inset:0;z-index:200;background:#fff;display:flex}
+html.fs-on,html.fs-on body{background:#fff}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
 .fs-ctrl{
   position:absolute;top:calc(12px + var(--safe-t));right:12px;z-index:210;
@@ -393,6 +405,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
         <div class="ticket" id="ticket">
           <div class="tk-bg" id="tkBg"><img class="tk-img" id="tkImg" alt="" hidden></div>
           <div class="tk-veil" id="tkVeil"></div>
+          <img class="tk-ov" id="tkOv" alt="" hidden>
           <div class="tk-sheen" id="tkSheen"></div>
 
           <div class="tk-top" id="tkTop">
@@ -501,6 +514,42 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <label class="switch"><span>아래쪽 그라디언트 (글자 잘 보이게)</span>
             <input type="checkbox" data-bind="bg.gradient"></label>
         </div>
+
+        <div class="card">
+          <div class="pane-title">겹쳐 올리는 사진</div>
+          <input type="file" id="ovInput" accept="image/*" hidden>
+          <input type="file" id="ovCamInput" accept="image/*" capture="environment" hidden>
+          <div class="drop" id="ovDrop">
+            <b>맨 위에 얹을 사진</b>
+            <span class="hint">배경 사진 위에 겹쳐 올립니다. 투명한 PNG는 투명한 채로 들어갑니다</span>
+          </div>
+          <img class="thumb fit" id="ovThumb" alt="" hidden>
+          <div class="btn-row">
+            <button class="btn" id="btnPickOv">앨범에서</button>
+            <button class="btn" id="btnCamOv">카메라로</button>
+          </div>
+          <div class="stack" id="ovTools" hidden>
+            <div class="field"><label>크기 <span class="val" data-val="ov.scale"></span></label>
+              <input type="range" min="5" max="300" step="1" data-bind="ov.scale" data-unit="%"></div>
+            <div class="field"><label>가로 위치 <span class="val" data-val="ov.x"></span></label>
+              <input type="range" min="0" max="100" step="1" data-bind="ov.x" data-unit="%"></div>
+            <div class="field"><label>세로 위치 <span class="val" data-val="ov.y"></span></label>
+              <input type="range" min="0" max="100" step="1" data-bind="ov.y" data-unit="%"></div>
+            <div class="field"><label>회전 <span class="val" data-val="ov.rot"></span></label>
+              <input type="range" min="-180" max="180" step="1" data-bind="ov.rot" data-unit="도"></div>
+            <div class="field"><label>투명도 <span class="val" data-val="ov.opacity"></span></label>
+              <input type="range" min="10" max="100" step="1" data-bind="ov.opacity" data-unit="%"></div>
+            <div class="field"><label>둥근 모서리 <span class="val" data-val="ov.round"></span></label>
+              <input type="range" min="0" max="50" step="1" data-bind="ov.round" data-unit="%"></div>
+            <label class="switch"><span>그림자</span><input type="checkbox" data-bind="ov.shadow"></label>
+            <div class="btn-row">
+              <button class="btn" id="btnOvReset">가운데로</button>
+              <button class="btn btn-danger" id="btnRemoveOv">겹친 사진 제거</button>
+            </div>
+            <p class="hint">미리보기에서 <b>겹친 사진을 바로 끌어</b> 옮기고, <b>두 손가락으로</b> 크기와 각도를 바꿉니다.
+              겹친 사진 밖을 끌면 배경 사진이 움직입니다.</p>
+          </div>
+        </div>
       </section>
 
       <!-- 흐르는 글자 -->
@@ -508,18 +557,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
         <div class="card">
           <div class="field"><label>문구</label>
             <input class="inp" type="text" data-bind="mq.text" enterkeyhint="done" placeholder="예: 캡처 화면으로는 입장할 수 없습니다"></div>
-          <div class="grid2">
-            <div class="field"><label>구분 기호</label>
-              <input class="inp" type="text" data-bind="mq.sep" maxlength="12" placeholder="•"></div>
-            <div class="field"><label>글꼴</label>
-              <select class="sel" data-bind="mq.font">
-                <option value="malgun">맑은 고딕</option>
-                <option value="sans">기본 (고딕)</option>
-                <option value="serif">세리프 (명조)</option>
-                <option value="mono">고정폭</option>
-              </select></div>
-          </div>
-          <label class="switch"><span>현재 시각 함께 표시</span><input type="checkbox" data-bind="mq.clock"></label>
+          <div class="field"><label>글꼴</label>
+            <select class="sel" data-bind="mq.font">
+              <option value="malgun">맑은 고딕</option>
+              <option value="sans">기본 (고딕)</option>
+              <option value="serif">세리프 (명조)</option>
+              <option value="mono">고정폭</option>
+            </select></div>
           <label class="switch"><span>움직이기</span><input type="checkbox" data-bind="mq.running"></label>
         </div>
 
@@ -554,7 +598,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
             <input type="range" min="0" max="100" step="1" data-bind="mq.bgAlpha" data-unit="%"></div>
           <label class="switch"><span>기울임꼴</span><input type="checkbox" data-bind="mq.italic"></label>
         </div>
-        <p class="hint">실제 모바일 티켓도 캡처 화면과 구분하려고 아래쪽에 글자와 현재 시각을 흘려보냅니다.</p>
+        <p class="hint">문구는 띠 끝까지 같은 간격으로 반복됩니다. 띠 높이를 0 으로 두면 글자에 딱 붙습니다.</p>
       </section>
 
       <!-- 티켓 정보 -->
@@ -718,6 +762,10 @@ const FONTS = {
   mono:'ui-monospace,"D2Coding",Consolas,"Courier New",monospace'
 };
 
+/* 흐르는 글자가 반복될 때 사이에 두는 간격 (글자 크기의 몇 배인가).
+   CSS 의 --mq-gap 과 캔버스 내보내기가 같은 값을 쓴다 */
+const MQ_GAP = 1.6;
+
 function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -726,11 +774,14 @@ function defaults(){
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
     bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
+    /* 배경 위에 겹쳐 올리는 사진.
+       x·y 는 티켓 안에서 사진 가운데가 놓이는 자리(%), scale 은 티켓 폭 대비 너비(%) */
+    ov: { img:null, w:0, h:0, x:50, y:50, scale:45, rot:0, opacity:100, round:0, shadow:false },
     mq: {
-      text:'캡처화면은 입장이 제한됩니다.', sep:'  •  ', font:'malgun',
+      text:'캡처화면은 입장이 제한됩니다.', font:'malgun',
       size:15, weight:800, ls:0, pad:11,
       color:'#ffffff', bg:'#000000', bgAlpha:100,
-      speed:70, dir:'left', italic:false, clock:true, running:true
+      speed:70, dir:'left', italic:false, running:true
     },
     info: {
       title:'2026 단독 콘서트', sub:'THE FIRST ENCORE', badge:'예매완료',
@@ -817,7 +868,6 @@ function toast(msg){
 const WD = ['일','월','화','수','목','금','토'];
 const p2 = n => String(n).padStart(2,'0');
 function fmtKo(d){ return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} (${WD[d.getDay()]}) ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
-function clockText(){ const d=new Date(); return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 function hhmm(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function hhmmss(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 
@@ -917,29 +967,73 @@ async function refreshTicketList(){
 }
 
 /* ============================================================
-   4. 사진 (리사이즈 + 회전 보정)
-   ============================================================ */
-const MAX_DIM = 1600;
+   4. 사진 (화질을 지키며 담기)
 
-async function loadImage(file){
+   내보내는 그림이 1170×2532 이다. 긴 변을 1600px 로 줄여 두면 그릴 때 1.5~2배로
+   늘어나서 흐려지므로 3000px 까지 남긴다. 줄일 필요가 없는 사진은 올린 파일을
+   그대로 담아 아예 다시 인코딩하지 않는다(= 화질 손실 0).
+   투명한 부분이 있으면 JPEG 로 바꿀 수 없다(검게 변한다) → PNG 로 담는다.
+   ============================================================ */
+const MAX_DIM = 3000;
+const JPEG_Q = 0.94;
+const KEEP_MAX_BYTES = 8 * 1024 * 1024;
+
+function fileToDataUrl(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(String(r.result));
+    r.onerror = () => rej(r.error || new Error('read'));
+    r.readAsDataURL(file);
+  });
+}
+
+/* 투명한 화소가 있는지 작게 줄여 그려서 빠르게 본다 */
+function hasAlpha(src, w, h){
+  try {
+    const cv = document.createElement('canvas');
+    cv.width  = Math.max(1, Math.min(64, w));
+    cv.height = Math.max(1, Math.min(64, h));
+    const cx = cv.getContext('2d');
+    cx.drawImage(src, 0, 0, cv.width, cv.height);
+    const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+    for(let i = 3; i < d.length; i += 4) if(d[i] < 250) return true;
+  } catch(e){ return true; }        // 알 수 없으면 손실 없는 쪽(PNG)으로
+  return false;
+}
+
+async function loadPhoto(file, which){
   if(!file || !/^image\//.test(file.type||'')) { toast('이미지 파일만 넣을 수 있습니다'); return; }
+  const ov = which === 'ov';
+  const slot = ov ? state.ov : state.bg;
   toast('사진을 불러오는 중…');
   try {
     const bmp = await decode(file);
-    const scale = Math.min(1, MAX_DIM / Math.max(bmp.width, bmp.height));
-    const w = Math.max(1, Math.round(bmp.width * scale));
-    const h = Math.max(1, Math.round(bmp.height * scale));
-    const cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
-    const cx = cv.getContext('2d');
-    cx.imageSmoothingQuality = 'high';
-    cx.drawImage(bmp, 0, 0, w, h);
-    if(bmp.close) bmp.close();
-    state.bg.img = cv.toDataURL('image/jpeg', 0.88);
-    state.bg.w = w; state.bg.h = h;
-    state.bg.posX = 50; state.bg.posY = 50; state.bg.zoom = 100;
-    fillForm(); render(); save(); syncBgUI();
-    toast('사진을 끌어 위치를 맞춰 보세요');
+    const iw = bmp.width, ih = bmp.height;
+    const scale = Math.min(1, MAX_DIM / Math.max(iw, ih));
+
+    if(scale === 1 && file.size <= KEEP_MAX_BYTES && /^image\/(jpeg|png|webp)$/.test(file.type||'')){
+      slot.img = await fileToDataUrl(file);   // 그대로 — 다시 인코딩하지 않는다
+      slot.w = iw; slot.h = ih;
+      if(bmp.close) bmp.close();
+    } else {
+      const w = Math.max(1, Math.round(iw * scale));
+      const h = Math.max(1, Math.round(ih * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d');
+      cx.imageSmoothingEnabled = true;
+      cx.imageSmoothingQuality = 'high';
+      cx.drawImage(bmp, 0, 0, w, h);
+      if(bmp.close) bmp.close();
+      slot.img = hasAlpha(cv, w, h) ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', JPEG_Q);
+      slot.w = w; slot.h = h;
+    }
+
+    if(ov){ slot.x = 50; slot.y = 50; slot.scale = 45; slot.rot = 0; }
+    else  { slot.posX = 50; slot.posY = 50; slot.zoom = 100; }
+
+    fillForm(); render(); save(); syncPhotoUI();
+    toast(ov ? '겹친 사진을 끌어 옮겨 보세요' : '사진을 끌어 위치를 맞춰 보세요');
   } catch(e){
     toast('사진을 읽지 못했습니다');
   }
@@ -961,14 +1055,22 @@ function viaImgTag(file){
     im.src = url;
   });
 }
-function syncBgUI(){
+function syncPhotoUI(){
   const has = !!state.bg.img;
   const th = $('#bgThumb');
   th.hidden = !has;
-  if(has) th.src = state.bg.img;
+  if(has && th.getAttribute('src') !== state.bg.img) th.src = state.bg.img;
   $('#btnRemoveBg').hidden = !has;
   $('#drop').hidden = has;
   $('#btnPickBg').textContent = has ? '다른 사진' : '앨범에서';
+
+  const on = !!state.ov.img;
+  const ot = $('#ovThumb');
+  ot.hidden = !on;
+  if(on && ot.getAttribute('src') !== state.ov.img) ot.src = state.ov.img;
+  $('#ovDrop').hidden = on;
+  $('#ovTools').hidden = !on;
+  $('#btnPickOv').textContent = on ? '다른 사진' : '앨범에서';
 }
 
 /* ============================================================
@@ -976,7 +1078,8 @@ function syncBgUI(){
    ============================================================ */
 const T = {};
 function cacheNodes(){
-  T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
+  T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.ov=$('#tkOv');
+  T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
   T.top=$('#tkTop'); T.topTitle=$('#tkTopTitle'); T.topTime=$('#tkTopTime');
   T.badge=$('#tkBadge'); T.title=$('#tkTitle'); T.sub=$('#tkSub');
   T.head=document.querySelector('.tk-head');
@@ -990,6 +1093,7 @@ function render(){
   T.bg.classList.toggle('has-img', !!bg.img);
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
   layoutBg();
+  layoutOv();
 
   const dim = `rgba(0,0,0,${bg.dim/100})`;
   T.veil.style.background = bg.gradient
@@ -1076,11 +1180,31 @@ function layoutBg(){
   im.style.filter = (b.blur || b.gray) ? `blur(${b.blur}px) grayscale(${b.gray}%)` : 'none';
 }
 
-/* 사진을 끌어서 옮기고, 두 손가락으로 확대한다 */
-function wireBgGesture(){
+/* 겹친 사진은 CSS 퍼센트로만 올려 둔다. 폭이 달라져도 비율이 그대로라
+   미리보기·전체화면·내보낸 그림이 저절로 같은 모습이 된다 */
+function layoutOv(){
+  const o = state.ov, im = T.ov;
+  if(!im) return;
+  if(!o.img){ im.hidden = true; return; }
+  if(im.getAttribute('src') !== o.img) im.src = o.img;
+  im.hidden = false;
+  im.style.width  = Math.max(1, o.scale) + '%';
+  im.style.left   = o.x + '%';
+  im.style.top    = o.y + '%';
+  im.style.transform = `translate(-50%,-50%) rotate(${o.rot}deg)`;
+  im.style.opacity = String(Math.max(5, o.opacity) / 100);
+  im.style.borderRadius = o.round + '%';
+  // box-shadow 는 네모 상자의 그림자라서 투명한 PNG 면 모양이 어긋난다.
+  // drop-shadow 는 사진의 투명도를 따라가고, 캔버스의 그림자와도 같은 값으로 맞춘다.
+  im.style.filter = o.shadow ? 'drop-shadow(0 8px 16px rgba(0,0,0,.5))' : 'none';
+}
+
+/* 미리보기에서 사진을 직접 만진다.
+   겹친 사진 위에서 시작하면 그 사진이, 밖에서 시작하면 배경 사진이 움직인다. */
+function wireGesture(){
   const area = $('#phoneScreen');
   const pts = new Map();
-  let start = null;
+  let start = null, mode = 'bg';
 
   const center = () => {
     const a = [...pts.values()];
@@ -1090,16 +1214,30 @@ function wireBgGesture(){
     const a = [...pts.values()];
     return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
   };
+  const angle = () => {
+    const a = [...pts.values()];
+    return a.length < 2 ? 0 : Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x) * 180 / Math.PI;
+  };
+  /* 겹친 사진 위를 짚었는가 (돌려 놓은 사진은 네모 테두리 기준으로 본다) */
+  const hitOv = (x, y) => {
+    if(!state.ov.img || T.ov.hidden) return false;
+    const r = T.ov.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
   const begin = () => {
-    const box = T.bg.getBoundingClientRect();
+    const b = state.bg, o = state.ov;
     start = {
-      c: center(), d: spread(), box,
-      posX: state.bg.posX, posY: state.bg.posY, zoom: state.bg.zoom
+      c: center(), d: spread(), a: angle(), box: T.bg.getBoundingClientRect(),
+      posX: b.posX, posY: b.posY, zoom: b.zoom,
+      x: o.x, y: o.y, scale: o.scale, rot: o.rot
     };
   };
 
   area.addEventListener('pointerdown', e => {
-    if(!state.bg.img) return;
+    if(pts.size === 0){
+      mode = hitOv(e.clientX, e.clientY) ? 'ov' : 'bg';
+      if(mode === 'bg' && !state.bg.img) return;
+    }
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     try { area.setPointerCapture(e.pointerId); } catch(err){}   // 실패해도 끌기는 계속돼야 한다
     begin();
@@ -1110,24 +1248,34 @@ function wireBgGesture(){
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     e.preventDefault();
 
-    const b = state.bg;
-    const boxW = start.box.width, boxH = start.box.height;
-
-    /* 두 손가락: 손가락 사이가 벌어진 만큼 확대하고, 손가락 사이에 있던 지점을 제자리에 붙잡아 둔다 */
-    if(pts.size >= 2 && start.d > 0){
-      const ratio = spread() / start.d;
-      b.zoom = Math.min(400, Math.max(100, Math.round(start.zoom * ratio)));
-    }
-
-    const g0 = bgGeom(boxW, boxH);
-    if(!g0) return;
-
     const now = center();
     const dx = now.x - start.c.x, dy = now.y - start.c.y;
-    if(g0.maxX > 0) b.posX = Math.min(100, Math.max(0, start.posX - dx / (2 * g0.maxX) * 100));
-    if(g0.maxY > 0) b.posY = Math.min(100, Math.max(0, start.posY - dy / (2 * g0.maxY) * 100));
+    const two = pts.size >= 2 && start.d > 0;
 
-    layoutBg();
+    if(mode === 'ov'){
+      /* 겹친 사진: 끌어서 옮기고, 두 손가락으로 크기와 각도를 바꾼다 */
+      const o = state.ov;
+      const boxW = start.box.width || 1, boxH = start.box.height || 1;
+      if(two){
+        o.scale = Math.min(300, Math.max(5, Math.round(start.scale * (spread() / start.d))));
+        let da = angle() - start.a;
+        if(da >  180) da -= 360;
+        if(da < -180) da += 360;
+        o.rot = Math.round(((start.rot + da + 540) % 360) - 180);
+      }
+      o.x = Math.min(100, Math.max(0, start.x + dx / boxW * 100));
+      o.y = Math.min(100, Math.max(0, start.y + dy / boxH * 100));
+      layoutOv();
+    } else {
+      /* 배경 사진: 손가락이 움직인 만큼 사진이 따라오고, 두 손가락으로 확대한다 */
+      const b = state.bg;
+      if(two) b.zoom = Math.min(400, Math.max(100, Math.round(start.zoom * (spread() / start.d))));
+      const g0 = bgGeom(start.box.width, start.box.height);
+      if(!g0) return;
+      if(g0.maxX > 0) b.posX = Math.min(100, Math.max(0, start.posX - dx / (2 * g0.maxX) * 100));
+      if(g0.maxY > 0) b.posY = Math.min(100, Math.max(0, start.posY - dy / (2 * g0.maxY) * 100));
+      layoutBg();
+    }
     syncBgInputs();
   });
 
@@ -1135,14 +1283,28 @@ function wireBgGesture(){
     if(!pts.has(e.pointerId)) return;
     pts.delete(e.pointerId);
     try { area.releasePointerCapture(e.pointerId); } catch(err){}
-    if(pts.size === 0){ start = null; save(); }
+    if(pts.size === 0){
+      start = null;
+      // 끌기가 끝나면 값을 정수로 맞춰 둔다 (슬라이더 눈금과 어긋나지 않게)
+      const b = state.bg, o = state.ov;
+      b.posX = Math.round(b.posX); b.posY = Math.round(b.posY);
+      o.x = Math.round(o.x); o.y = Math.round(o.y);
+      syncBgInputs(); save();
+    }
     else begin();            // 손가락 하나를 떼면 남은 손가락 기준으로 다시 잡는다
   };
   area.addEventListener('pointerup', end);
   area.addEventListener('pointercancel', end);
 
-  /* 데스크톱: 휠로 확대 */
+  /* 데스크톱: 휠로 확대 (겹친 사진 위에서는 그 사진의 크기) */
   area.addEventListener('wheel', e => {
+    if(hitOv(e.clientX, e.clientY)){
+      e.preventDefault();
+      const o = state.ov;
+      o.scale = Math.min(300, Math.max(5, Math.round(o.scale - e.deltaY * 0.08)));
+      layoutOv(); syncBgInputs(); save();
+      return;
+    }
     if(!state.bg.img) return;
     e.preventDefault();
     state.bg.zoom = Math.min(400, Math.max(100, Math.round(state.bg.zoom - e.deltaY * 0.15)));
@@ -1151,7 +1313,7 @@ function wireBgGesture(){
 }
 
 function syncBgInputs(){
-  for(const p of ['bg.posX','bg.posY','bg.zoom']){
+  for(const p of ['bg.posX','bg.posY','bg.zoom','ov.x','ov.y','ov.scale','ov.rot']){
     const el = document.querySelector(`[data-bind="${p}"]`);
     if(el) el.value = Math.round(getPath(state, p));
     const out = document.querySelector(`[data-val="${p}"]`);
@@ -1202,21 +1364,12 @@ function buildMarquee(){
   const scale = T.mq.offsetWidth > 0 ? (rect.width / T.mq.offsetWidth) : 1;
   const boxW = Math.max(120, T.mq.offsetWidth || rect.width || 390);
 
+  /* 한 벌 = 문구 하나 + 오른쪽 간격(--mq-gap). 이 한 벌을 띠가 찰 만큼 늘어놓는다 */
   const makeUnit = () => {
     const u = document.createElement('span'); u.className = 'mq-unit';
     const txt = document.createElement('span');
     txt.textContent = (m.text || '').trim() || ' ';
     u.appendChild(txt);
-    if(m.clock){
-      const sp = document.createElement('span'); sp.className='mq-sep';
-      sp.textContent = ' ' + (m.sep || '•').trim() + ' ';
-      const ck = document.createElement('span'); ck.className='mq-clock';
-      ck.textContent = clockText();
-      u.append(sp, ck);
-    }
-    const sep = document.createElement('span'); sep.className='mq-sep';
-    sep.textContent = m.sep || '  •  ';
-    u.appendChild(sep);
     return u;
   };
 
@@ -1246,6 +1399,7 @@ function applySpeed(){
 
 function styleMarquee(){
   const m = state.mq;
+  T.track.style.setProperty('--mq-gap', MQ_GAP + 'em');
   T.mq.style.background = hexToRgba(m.bg, m.bgAlpha);
   T.mq.style.paddingTop = m.pad + 'px';
   T.mq.style.paddingBottom = `calc(${m.pad}px + var(--tk-inset-bot))`;
@@ -1260,18 +1414,13 @@ function styleMarquee(){
 }
 
 setInterval(() => {
-  if(!T.track) return;
-  if(state.mq.clock){
-    const t = clockText();
-    for(const el of T.track.querySelectorAll('.mq-clock')) el.textContent = t;
-  }
-  if(state.look.topClock) T.topTime.textContent = hhmm();
+  if(T.topTime && state.look.topClock) T.topTime.textContent = hhmm();
 }, 1000);
 
 /* ============================================================
    7. 폼 ↔ 상태
    ============================================================ */
-const REBUILD = new Set(['mq.text','mq.sep','mq.size','mq.weight','mq.ls','mq.font','mq.italic','mq.clock']);
+const REBUILD = new Set(['mq.text','mq.size','mq.weight','mq.ls','mq.font','mq.italic']);
 
 function readEl(el){
   if(el.type === 'checkbox') return el.checked;
@@ -1286,7 +1435,7 @@ function fillForm(){
     else if(v != null)           el.value = v;
   }
   for(const el of $$('[data-val]')) updateVal(el.dataset.val);
-  syncBgUI();
+  syncPhotoUI();
 }
 function updateVal(path){
   const out = document.querySelector(`[data-val="${path}"]`);
@@ -1343,9 +1492,19 @@ async function newTicket(base){
    ============================================================ */
 let wakeLock = null, ctrlTimer = null;
 
+/* 기기의 상태표시줄·홈바 자리는 페이지가 아니라 브라우저가 칠한다.
+   그 색이 theme-color 라서, 전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다. */
+const THEME_APP = '#0b0c10', THEME_FS = '#ffffff';
+function setThemeColor(c){
+  const m = document.querySelector('meta[name="theme-color"]');
+  if(m) m.setAttribute('content', c);
+}
+
 async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
+  document.documentElement.classList.add('fs-on');
+  setThemeColor(THEME_FS);
   layoutBg();
   buildMarquee();
   if(state.look.info && state.look.code) drawBars();
@@ -1355,6 +1514,8 @@ async function openPreview(){
 function closePreview(){
   $('#phoneScreen').appendChild(T.ticket);
   $('#fs').hidden = true;
+  document.documentElement.classList.remove('fs-on');
+  setThemeColor(THEME_APP);
   $('#fsCtrl').classList.remove('dim');
   clearTimeout(ctrlTimer);
   layoutBg();
@@ -1399,12 +1560,7 @@ async function importJson(file){
    배치는 브라우저가 해 주므로 화면과 어긋나지 않는다.
    ============================================================ */
 const EX_W = 390, EX_H = 844, EX_SCALE = 3;
-const marqueeUnitText = () => {
-  const m = state.mq;
-  const t = (m.text || '').trim() || ' ';
-  const sep = m.sep || '  •  ';
-  return t + (m.clock ? ' ' + sep.trim() + ' ' + clockText() : '') + sep;
-};
+const marqueeUnitText = () => ((state.mq.text || '').trim() || ' ');
 
 function pathRound(cx, x, y, w, h, r){
   const rr = Math.min(r, w/2, h/2);
@@ -1476,9 +1632,12 @@ function paintBackdrop(cx){
     const k = b.blur > 0 ? (1 + b.blur/90) : 1;
     const dw = g.dw * k, dh = g.dh * k;
     const canFilter = 'filter' in cx;
-    if(canFilter && (b.blur || b.gray)) cx.filter = `blur(${b.blur}px) grayscale(${b.gray}%)`;
+    // 정보 카드의 흐림 효과를 그릴 때는 바깥에서 이미 filter 가 걸려 있다. 덮어쓰지 않고 겹친다
+    const prev = canFilter ? (cx.filter || 'none') : 'none';
+    const mine = (b.blur || b.gray) ? `blur(${b.blur}px) grayscale(${b.gray}%)` : '';
+    if(canFilter && mine) cx.filter = (prev !== 'none' ? prev + ' ' : '') + mine;
     cx.drawImage(T.img, EX_W/2 - dw/2 + g.tx, EX_H/2 - dh/2 + g.ty, dw, dh);
-    if(canFilter) cx.filter = 'none';
+    if(canFilter) cx.filter = prev;
   } else {
     const lg = cx.createLinearGradient(0, 0, EX_W * 0.8, EX_H);
     lg.addColorStop(0, '#2a1d3f'); lg.addColorStop(.45, '#121a2e'); lg.addColorStop(1, '#0d0f14');
@@ -1495,7 +1654,42 @@ function paintBackdrop(cx){
     cx.fillStyle = `rgba(0,0,0,${b.dim/100})`;
     cx.fillRect(0, 0, EX_W, EX_H);
   }
+  /* 겹친 사진도 배경의 일부다. 여기서 그려야 정보 카드의 흐림에도 같이 비친다 */
+  drawOverlay(cx);
   void look;
+}
+
+/* 겹친 사진. 화면 CSS(width:%, left:%, top:%, translate(-50%,-50%), rotate)와 같은 식으로 잡는다.
+   둥근 모서리·그림자가 있으면 한 번 따로 그린 뒤 그림자를 입힌다(잘라낸 모양대로 그림자가 생기게). */
+function drawOverlay(cx){
+  const o = state.ov;
+  if(!o.img || !T.ov.complete || !T.ov.naturalWidth) return;
+  const nw = o.w || T.ov.naturalWidth, nh = o.h || T.ov.naturalHeight;
+  if(!nw || !nh) return;
+
+  const w = EX_W * Math.max(1, o.scale) / 100;
+  const h = w * (nh / nw);
+  const r = Math.min(w, h) * Math.max(0, Math.min(50, o.round)) / 100;
+
+  let src = T.ov, sw = w, sh = h;
+  if(r > 0){                      // 모서리를 둥글게 자른 뒤라야 그림자도 그 모양을 따라간다
+    const t = document.createElement('canvas');
+    t.width  = Math.max(1, Math.round(w * EX_SCALE));
+    t.height = Math.max(1, Math.round(h * EX_SCALE));
+    const tc = t.getContext('2d');
+    tc.scale(EX_SCALE, EX_SCALE);
+    if(r > 0){ pathRound(tc, 0, 0, w, h, r); tc.clip(); }
+    tc.drawImage(T.ov, 0, 0, w, h);
+    src = t; sw = w; sh = h;
+  }
+
+  cx.save();
+  cx.globalAlpha = Math.max(5, o.opacity) / 100;
+  cx.translate(EX_W * o.x / 100, EX_H * o.y / 100);
+  if(o.rot) cx.rotate(o.rot * Math.PI / 180);
+  if(o.shadow){ cx.shadowColor = 'rgba(0,0,0,.5)'; cx.shadowBlur = 16; cx.shadowOffsetY = 8; }
+  cx.drawImage(src, -sw/2, -sh/2, sw, sh);
+  cx.restore();
 }
 
 function drawTicket(root){
@@ -1607,7 +1801,8 @@ function drawTicket(root){
     if(look.shadow){ cx.shadowColor = 'rgba(0,0,0,.45)'; cx.shadowBlur = 6; cx.shadowOffsetY = 1; }
     cx.textBaseline = 'middle'; cx.textAlign = 'left';
     const unit = marqueeUnitText();
-    const uw = Math.max(10, cx.measureText(unit).width);
+    // 화면의 .mq-unit 은 오른쪽에 --mq-gap(=글자 크기의 MQ_GAP 배)만큼 여백을 둔다
+    const uw = Math.max(10, cx.measureText(unit).width + MQ_GAP * m.size);
     const cy = r.y + r.h / 2;
     for(let x = r.x; x < r.x + r.w; x += uw) cx.fillText(unit, x, cy);
     cx.restore();
@@ -1732,17 +1927,37 @@ function wire(){
   $('#drop').addEventListener('click', ()=> pick(fi));
   $('#btnPickBg').addEventListener('click', ()=> pick(fi));
   $('#btnCamBg').addEventListener('click', ()=> pick(ci));
-  for(const inp of [fi, ci]) inp.addEventListener('change', ()=> { if(inp.files[0]) loadImage(inp.files[0]); });
+  for(const inp of [fi, ci]) inp.addEventListener('change', ()=> { if(inp.files[0]) loadPhoto(inp.files[0], 'bg'); });
   $('#btnRemoveBg').addEventListener('click', ()=> {
-    state.bg.img = null; render(); save(); syncBgUI(); toast('사진을 제거했습니다');
+    state.bg.img = null; render(); save(); syncPhotoUI(); toast('사진을 제거했습니다');
   });
 
-  const drop = $('#drop');
-  for(const ev of ['dragenter','dragover']) drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); });
-  for(const ev of ['dragleave','drop'])     drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); });
-  drop.addEventListener('drop', e => { e.stopPropagation(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadImage(f); });
+  /* 겹쳐 올리는 사진 */
+  const oi = $('#ovInput'), oc = $('#ovCamInput');
+  $('#ovDrop').addEventListener('click', ()=> pick(oi));
+  $('#btnPickOv').addEventListener('click', ()=> pick(oi));
+  $('#btnCamOv').addEventListener('click', ()=> pick(oc));
+  for(const inp of [oi, oc]) inp.addEventListener('change', ()=> { if(inp.files[0]) loadPhoto(inp.files[0], 'ov'); });
+  $('#btnRemoveOv').addEventListener('click', ()=> {
+    state.ov.img = null; render(); save(); syncPhotoUI(); toast('겹친 사진을 제거했습니다');
+  });
+  $('#btnOvReset').addEventListener('click', ()=> {
+    const o = state.ov; o.x = 50; o.y = 50; o.scale = 45; o.rot = 0;
+    fillForm(); render(); save(); toast('가운데로 되돌렸습니다');
+  });
+  /* 크기를 모르는 옛 기록·가져온 파일은 다 읽힌 뒤에 채운다 */
+  T.ov.addEventListener('load', ()=> {
+    const w = T.ov.naturalWidth, h = T.ov.naturalHeight;
+    if(w && h && (state.ov.w !== w || state.ov.h !== h)){ state.ov.w = w; state.ov.h = h; }
+  });
+
+  for(const [el, which] of [[$('#drop'), 'bg'], [$('#ovDrop'), 'ov']]){
+    for(const ev of ['dragenter','dragover']) el.addEventListener(ev, e => { e.preventDefault(); el.classList.add('over'); });
+    for(const ev of ['dragleave','drop'])     el.addEventListener(ev, e => { e.preventDefault(); el.classList.remove('over'); });
+    el.addEventListener('drop', e => { e.stopPropagation(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadPhoto(f, which); });
+  }
   window.addEventListener('dragover', e => e.preventDefault());
-  window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadImage(f); });
+  window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadPhoto(f, 'bg'); });
 
   $('#btnDtFill').addEventListener('click', ()=> {
     const v = $('#dtPick').value;
@@ -1903,7 +2118,7 @@ async function hardRefresh(){
   wireTabs();
   wireGrip();
   wireSwipeClose();
-  wireBgGesture();
+  wireGesture();
   wire();
   wireObservers();
 
