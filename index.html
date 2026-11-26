@@ -193,6 +193,11 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
      flex 와 상관이 없다 → 띠를 맨 아래에 붙여 둔다 */
   display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate;
   background:#0d0f14;color:#fff;
+  /* 사진 위를 꾹 누르면 아이폰 사파리는 "사진 저장" 메뉴를, 안드로이드 크롬은 이미지 메뉴를 띄운다.
+     전체화면 잠금이 '5초 꾹 누르기'라서 이 메뉴가 뜨면 손가락이 끊겨 잠금이 풀리지 않는다.
+     -webkit-touch-callout 은 상속되므로 티켓 전체에 한 번만 꺼 둔다. */
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;
   --tk-inset-bot:0px;                 /* 홈 인디케이터 자리 */
 }
 /* 기기의 안전영역은 전체화면으로 볼 때만 쓴다. 작은 미리보기에 넣으면 빈 띠만 생긴다 */
@@ -202,10 +207,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
 }
 .tk-bg.has-img{background-image:none}
-/* 사진은 img 로 올려 두고 transform 으로 움직인다. 끌기·확대가 부드럽고 계산도 단순하다 */
+/* 사진은 img 로 올려 두고 transform 으로 움직인다. 끌기·확대가 부드럽고 계산도 단순하다.
+   손가락은 사진이 아니라 그 아래 칸이 받는다(pointer-events:none) — 길게 누를 때 OS가
+   "이미지"로 알아보지 못하게 하려는 것이다. 끌기는 어차피 좌표로 직접 계산한다. */
 .tk-img{
   position:absolute;left:50%;top:50%;max-width:none;display:block;
   transform-origin:center center;will-change:transform;
+  pointer-events:none;-webkit-touch-callout:none;-webkit-user-drag:none;
 }
 .tk-img[hidden]{display:none}
 .tk-veil{position:absolute;inset:0;z-index:1;pointer-events:none}
@@ -213,7 +221,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
    위치와 크기를 % 로 잡아 두면 미리보기와 내보낸 그림의 비율이 저절로 같아진다 */
 .tk-ov{
   position:absolute;z-index:2;display:block;height:auto;max-width:none;
-  transform-origin:center center;pointer-events:none;user-select:none;-webkit-user-drag:none;
+  transform-origin:center center;pointer-events:none;user-select:none;
+  -webkit-user-drag:none;-webkit-touch-callout:none;
 }
 .tk-ov[hidden]{display:none}
 .tk-sheen{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;mix-blend-mode:screen}
@@ -240,7 +249,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 /* ===== 전체화면 미리보기 ===== */
 /* 기기의 상태표시줄/홈바 자리는 브라우저가 theme-color 와 페이지 배경으로 칠한다.
    전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다 (openPreview 가 함께 바꾼다) */
-.fs{position:fixed;inset:0;z-index:200;background:#fff;display:flex}
+.fs{
+  position:fixed;inset:0;z-index:200;background:#fff;display:flex;
+  -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
+}
 html.fs-on,html.fs-on body{background:#fff}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
 /* 전체화면은 잠겨 있다. 한 점을 5초 동안 누르고 있어야 풀린다.
@@ -1013,6 +1025,7 @@ function layoutOv(){
    겹친 사진 위에서 시작하면 그 사진이, 밖에서 시작하면 배경 사진이 움직인다. */
 function wireGesture(){
   const area = $('#phoneScreen');
+  area.addEventListener('contextmenu', e => e.preventDefault());
   const pts = new Map();
   let start = null, mode = 'bg';
 
@@ -1342,6 +1355,11 @@ function lockReset(){
 }
 function wireFsLock(){
   const stage = $('#fsStage');
+  /* CSS 로 막지 못하는 브라우저를 위한 두 번째 빗장.
+     touchstart 를 막아 두면 아이폰의 길게 누르기 메뉴와 돋보기가 뜨지 않는다.
+     전체화면 안에는 누를 버튼이 없으므로 click 이 사라져도 잃는 게 없다. */
+  stage.addEventListener('contextmenu', e => e.preventDefault());
+  stage.addEventListener('touchstart', e => e.preventDefault(), {passive:false});
   stage.addEventListener('pointerdown', e => {
     if(holdFrom) return;                  // 두 번째 손가락은 세지 않는다
     holdStart(e.clientX, e.clientY);

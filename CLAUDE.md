@@ -60,6 +60,11 @@
 - **SVG 요소에는 `el.hidden` 프로퍼티가 없다**(HTML 전용). `el.hidden = false` 는 아무 일도 하지 않고
   `[hidden]{display:none}` 이 그대로 남는다. `removeAttribute('hidden')` / `setAttribute('hidden','')` 를 쓸 것.
 - 전체화면에서 아래로 쓸어 닫기는 **없앴다.** 잠금과 정면으로 부딪친다.
+- **사진 위를 꾹 누르면 OS 가 "사진 저장" 메뉴를 띄워 잠금 해제가 끊긴다**(아이폰에서 실제로 겪었다).
+  세 겹으로 막아 둔다 — `.ticket`·`.fs` 에 `-webkit-touch-callout:none`(상속된다) + `user-select:none`,
+  `.tk-img`·`.tk-ov` 에 `pointer-events:none`(손가락이 이미지가 아니라 아래 칸에 닿게),
+  `#fsStage` 에서 `contextmenu`(안드로이드)와 `touchstart`(아이폰) 기본 동작 취소.
+  touchstart 를 막아도 포인터 이벤트는 그대로 온다. 오히려 사파리가 중간에 `pointercancel` 을 던지지 않는다.
 - 저장해 둔 티켓의 기본값을 바꿀 때는 `defaults()` 만 고치면 이미 저장된 티켓에는 반영되지 않는다.
   `migrate()` 에서 **예전 기본값과 똑같을 때만** 새 값으로 올리고 `v` 를 올린다. 사용자가 바꾼 값은 건드리지 않는다.
   기능을 들어낼 때는 `GONE` 에 적어 두면 옛 기록에서 그 항목까지 지워진다(내보낸 `.json` 도 깨끗해진다).
