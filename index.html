@@ -118,6 +118,7 @@ h1,h2,h3,p{margin:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .hint{font-size:12px;color:var(--txt-3);line-height:1.5}
+.hint.ok{color:#7fd68a}
 
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:0;
@@ -563,8 +564,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
             아이폰 사파리는 <b>공유 → 홈 화면에 추가</b>, 안드로이드 크롬은 <b>메뉴 → 앱 설치</b>.
             한 번 열어 두면 인터넷이 끊겨도 그대로 열립니다.
           </p>
-          <p class="hint"><b>전체화면은 홈 화면에서 연 쪽이 낫습니다.</b> 브라우저로 열면 위아래에
-            주소창·도구막대 자리가 남지만, 홈 화면에 올려 두고 열면 사진이 화면 끝까지 찹니다.</p>
+          <p class="hint" id="installState"></p>
         </div>
         <div class="card">
           <div class="pane-title">앱 버전</div>
@@ -1710,6 +1710,7 @@ function wire(){
   $('#buildInfo').textContent = isNaN(lm) ? '' :
     `지금 보고 있는 화면: ${lm.getFullYear()}.${p2(lm.getMonth()+1)}.${p2(lm.getDate())} ${p2(lm.getHours())}:${p2(lm.getMinutes())}`;
 
+  updateInstallState();
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
   $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
@@ -1745,6 +1746,36 @@ function wireObservers(){
 /* ============================================================
    13. 설치 / 서비스워커
    ============================================================ */
+/* 지금 이 앱이 '홈 화면 앱'으로 열려 있는지, 브라우저 안인지 알려 준다.
+   브라우저 안이면 전체화면을 해도 맨 위·맨 아래에 브라우저 막대 자리가 남아
+   그 부분만 색이 달라 보인다 — 페이지가 그 자리를 칠할 수도, 넘어갈 수도 없다. */
+function isStandalone(){
+  try {
+    return window.navigator.standalone === true ||
+           window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: fullscreen)').matches;
+  } catch(e){ return false; }
+}
+function updateInstallState(){
+  const el = document.getElementById('installState');
+  if(!el) return;
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if(isStandalone()){
+    el.className = 'hint ok';
+    el.innerHTML = '✓ <b>홈 화면 앱으로 열려 있습니다.</b> 전체화면이 화면 끝까지, 둥근 모서리 안쪽까지 찹니다.';
+  } else if(ios){
+    el.className = 'hint';
+    el.innerHTML = '지금은 <b>사파리 안에서 열려 있습니다.</b> 전체화면을 해도 맨 위·맨 아래에 ' +
+      '사파리 막대 자리가 남아 그 부분만 색이 달라 보이고, 둥근 모서리 쪽까지 닿지 않습니다. ' +
+      '<b>공유 → 홈 화면에 추가</b>로 올려서 거기서 열면 사라집니다.';
+  } else {
+    el.className = 'hint';
+    el.innerHTML = '지금은 <b>브라우저 안에서 열려 있습니다.</b> 전체화면을 해도 위아래에 ' +
+      '주소창·도구막대 자리가 남습니다. 홈 화면(앱)으로 설치해서 열면 화면 끝까지 찹니다.';
+  }
+}
+
 let installEvent = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault(); installEvent = e;
@@ -1755,7 +1786,7 @@ window.addEventListener('beforeinstallprompt', e => {
     installEvent = null;
   };
 });
-window.addEventListener('appinstalled', ()=> { $('#btnInstall').hidden = true; toast('홈 화면에 설치했습니다'); });
+window.addEventListener('appinstalled', ()=> { $('#btnInstall').hidden = true; updateInstallState(); toast('홈 화면에 설치했습니다'); });
 
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
   // 새 서비스워커가 자리를 넘겨받으면 한 번만 다시 그린다.
