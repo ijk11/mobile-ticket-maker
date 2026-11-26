@@ -169,7 +169,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
   box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.07) inset;
   transform-origin:top center;position:relative;
 }
-.phone-screen{width:100%;height:100%;border-radius:38px;overflow:hidden;background:#000;position:relative}
+.phone-screen{
+  width:100%;height:100%;border-radius:38px;overflow:hidden;background:#000;position:relative;
+  touch-action:none;   /* 사진을 끌 때 화면이 같이 밀리지 않게 */
+}
 .phone::before{
   content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);
   width:104px;height:26px;border-radius:999px;background:#0a0b0e;z-index:5;
@@ -194,10 +197,16 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 #fsStage .ticket{--tk-inset-top:env(safe-area-inset-top,0px);--tk-inset-bot:env(safe-area-inset-bottom,0px)}
 .phone-screen .ticket{--tk-inset-top:30px}   /* 데스크톱 폰 프레임의 노치 자리 */
 .tk-bg{
-  position:absolute;inset:0;z-index:0;background-repeat:no-repeat;background-color:#0d0f14;
+  position:absolute;inset:0;z-index:0;overflow:hidden;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
 }
-.tk-bg.has-img{background-image:var(--tk-img)}
+.tk-bg.has-img{background-image:none}
+/* 사진은 img 로 올려 두고 transform 으로 움직인다. 끌기·확대가 부드럽고 계산도 단순하다 */
+.tk-img{
+  position:absolute;left:50%;top:50%;max-width:none;display:block;
+  transform-origin:center center;will-change:transform;
+}
+.tk-img[hidden]{display:none}
 .tk-veil{position:absolute;inset:0;z-index:1;pointer-events:none}
 .tk-sheen{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;mix-blend-mode:screen}
 .tk-sheen.on{
@@ -382,7 +391,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
       <div class="phone-screen" id="phoneScreen">
 
         <div class="ticket" id="ticket">
-          <div class="tk-bg" id="tkBg"></div>
+          <div class="tk-bg" id="tkBg"><img class="tk-img" id="tkImg" alt="" hidden></div>
           <div class="tk-veil" id="tkVeil"></div>
           <div class="tk-sheen" id="tkSheen"></div>
 
@@ -475,7 +484,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <div class="field"><label>세로 위치 <span class="val" data-val="bg.posY"></span></label>
             <input type="range" min="0" max="100" step="1" data-bind="bg.posY" data-unit="%"></div>
           <div class="field"><label>확대 <span class="val" data-val="bg.zoom"></span></label>
-            <input type="range" min="100" max="260" step="1" data-bind="bg.zoom" data-unit="%"></div>
+            <input type="range" min="100" max="400" step="1" data-bind="bg.zoom" data-unit="%"></div>
+          <button class="btn" id="btnBgReset">가운데로 되돌리기</button>
+          <p class="hint">미리보기에서 <b>사진을 끌어</b> 옮기고, <b>두 손가락으로 벌려</b> 확대할 수 있습니다.
+            마우스는 끌기와 휠입니다. 슬라이더는 더 미세하게 맞출 때 쓰세요.</p>
         </div>
 
         <div class="card">
@@ -629,9 +641,16 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
       <!-- 저장 · 설치 -->
       <section class="pane" data-pane="save">
         <div class="card">
+          <div class="pane-title">완성한 티켓 저장</div>
+          <button class="btn btn-primary" id="btnPng">이미지로 저장 (PNG)</button>
+          <p class="hint">폰에서는 공유 창이 열립니다. 거기서 <b>이미지 저장</b>을 고르면 사진첩에 들어갑니다.
+            세로 1170 × 2532로 뽑으며, 흐르는 글자는 멈춘 한 장면으로 담깁니다.</p>
+        </div>
+        <div class="card">
           <div class="field"><label>이 티켓 이름</label>
             <input class="inp" type="text" data-bind="name" placeholder="내 티켓"></div>
-          <p class="hint">입력한 내용과 사진은 이 폰 안(브라우저 저장소)에 자동으로 저장됩니다.</p>
+          <p class="hint">입력한 내용과 사진은 이 폰 안(브라우저 저장소)에 자동으로 저장됩니다.
+            <span id="savedAt"></span></p>
         </div>
         <div class="card">
           <div class="pane-title">백업</div>
@@ -706,7 +725,7 @@ function defaults(){
     v: 3,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
-    bg: { img:null, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
+    bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
     mq: {
       text:'캡처화면은 입장이 제한됩니다.', sep:'  •  ', font:'malgun',
       size:15, weight:800, ls:0, pad:11,
@@ -800,6 +819,7 @@ const p2 = n => String(n).padStart(2,'0');
 function fmtKo(d){ return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} (${WD[d.getDay()]}) ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function clockText(){ const d=new Date(); return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 function hhmm(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+function hhmmss(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 
 const PREF = {
   get(k, d){ try{ const v = localStorage.getItem('mtm-'+k); return v==null?d:v; }catch(e){ return d; } },
@@ -862,8 +882,14 @@ function save(){
       await DB.put(JSON.parse(JSON.stringify(state)));
       await DB.setCur(state.id);
       await refreshTicketList();
-    } catch(e) { LS.save(); }
+      markSaved();
+    } catch(e) { LS.save(); markSaved(); }
   }, 350);
+}
+
+function markSaved(){
+  const el = document.getElementById('savedAt');
+  if(el) el.textContent = `마지막 저장 ${hhmmss()}`;
 }
 
 async function refreshTicketList(){
@@ -910,8 +936,10 @@ async function loadImage(file){
     cx.drawImage(bmp, 0, 0, w, h);
     if(bmp.close) bmp.close();
     state.bg.img = cv.toDataURL('image/jpeg', 0.88);
-    render(); save(); syncBgUI();
-    toast('사진을 넣었습니다');
+    state.bg.w = w; state.bg.h = h;
+    state.bg.posX = 50; state.bg.posY = 50; state.bg.zoom = 100;
+    fillForm(); render(); save(); syncBgUI();
+    toast('사진을 끌어 위치를 맞춰 보세요');
   } catch(e){
     toast('사진을 읽지 못했습니다');
   }
@@ -948,7 +976,7 @@ function syncBgUI(){
    ============================================================ */
 const T = {};
 function cacheNodes(){
-  T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
+  T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
   T.top=$('#tkTop'); T.topTitle=$('#tkTopTitle'); T.topTime=$('#tkTopTime');
   T.badge=$('#tkBadge'); T.title=$('#tkTitle'); T.sub=$('#tkSub');
   T.head=document.querySelector('.tk-head');
@@ -959,20 +987,9 @@ function cacheNodes(){
 function render(){
   const {bg, info, look} = state;
 
-  if(bg.img){
-    T.bg.classList.add('has-img');
-    T.bg.style.setProperty('--tk-img', `url("${bg.img}")`);
-  } else {
-    T.bg.classList.remove('has-img');
-    T.bg.style.removeProperty('--tk-img');
-  }
-  const z = Math.max(100, bg.zoom) / 100;
-  T.bg.style.backgroundSize = bg.fit === 'contain'
-    ? `${100*z}% auto`
-    : (z === 1 ? 'cover' : `${100*z}% ${100*z}%`);
-  T.bg.style.backgroundPosition = `${bg.posX}% ${bg.posY}%`;
-  T.bg.style.filter = `blur(${bg.blur}px) grayscale(${bg.gray}%)`;
-  T.bg.style.transform = bg.blur > 0 ? `scale(${1 + bg.blur/90})` : 'none';
+  T.bg.classList.toggle('has-img', !!bg.img);
+  if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
+  layoutBg();
 
   const dim = `rgba(0,0,0,${bg.dim/100})`;
   T.veil.style.background = bg.gradient
@@ -1025,6 +1042,123 @@ function render(){
   styleMarquee();
 }
 
+/* 사진 배치 계산.
+   posX/posY 는 "사진의 어느 지점이 화면 가운데에 오는가"(0~100), zoom 은 꽉 채운 상태 기준 배율. */
+function bgGeom(boxW, boxH){
+  const b = state.bg;
+  const nw = b.w || T.img.naturalWidth, nh = b.h || T.img.naturalHeight;
+  if(!nw || !nh || !boxW || !boxH) return null;
+  const base = b.fit === 'contain'
+    ? Math.min(boxW / nw, boxH / nh)
+    : Math.max(boxW / nw, boxH / nh);
+  const s = base * (Math.max(10, b.zoom) / 100);
+  const dw = nw * s, dh = nh * s;
+  const maxX = Math.max(0, (dw - boxW) / 2), maxY = Math.max(0, (dh - boxH) / 2);
+  return {
+    nw, nh, s, dw, dh, maxX, maxY,
+    tx: (0.5 - b.posX / 100) * 2 * maxX,
+    ty: (0.5 - b.posY / 100) * 2 * maxY
+  };
+}
+
+function layoutBg(){
+  const b = state.bg, im = T.img;
+  const boxW = T.bg.offsetWidth, boxH = T.bg.offsetHeight;
+  const g = b.img ? bgGeom(boxW, boxH) : null;
+  if(!g){ im.hidden = true; return; }
+  im.hidden = false;
+  im.style.width  = g.dw + 'px';
+  im.style.height = g.dh + 'px';
+  im.style.marginLeft = (-g.dw / 2) + 'px';
+  im.style.marginTop  = (-g.dh / 2) + 'px';
+  const k = b.blur > 0 ? (1 + b.blur / 90) : 1;   // 흐림 번짐이 가장자리에 비치지 않게
+  im.style.transform = `translate3d(${g.tx.toFixed(1)}px,${g.ty.toFixed(1)}px,0) scale(${k})`;
+  im.style.filter = (b.blur || b.gray) ? `blur(${b.blur}px) grayscale(${b.gray}%)` : 'none';
+}
+
+/* 사진을 끌어서 옮기고, 두 손가락으로 확대한다 */
+function wireBgGesture(){
+  const area = $('#phoneScreen');
+  const pts = new Map();
+  let start = null;
+
+  const center = () => {
+    const a = [...pts.values()];
+    return { x:(a[0].x + (a[1]?a[1].x:a[0].x))/2, y:(a[0].y + (a[1]?a[1].y:a[0].y))/2 };
+  };
+  const spread = () => {
+    const a = [...pts.values()];
+    return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+  };
+  const begin = () => {
+    const box = T.bg.getBoundingClientRect();
+    start = {
+      c: center(), d: spread(), box,
+      posX: state.bg.posX, posY: state.bg.posY, zoom: state.bg.zoom
+    };
+  };
+
+  area.addEventListener('pointerdown', e => {
+    if(!state.bg.img) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    try { area.setPointerCapture(e.pointerId); } catch(err){}   // 실패해도 끌기는 계속돼야 한다
+    begin();
+  });
+
+  area.addEventListener('pointermove', e => {
+    if(!pts.has(e.pointerId) || !start) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    e.preventDefault();
+
+    const b = state.bg;
+    const boxW = start.box.width, boxH = start.box.height;
+
+    /* 두 손가락: 손가락 사이가 벌어진 만큼 확대하고, 손가락 사이에 있던 지점을 제자리에 붙잡아 둔다 */
+    if(pts.size >= 2 && start.d > 0){
+      const ratio = spread() / start.d;
+      b.zoom = Math.min(400, Math.max(100, Math.round(start.zoom * ratio)));
+    }
+
+    const g0 = bgGeom(boxW, boxH);
+    if(!g0) return;
+
+    const now = center();
+    const dx = now.x - start.c.x, dy = now.y - start.c.y;
+    if(g0.maxX > 0) b.posX = Math.min(100, Math.max(0, start.posX - dx / (2 * g0.maxX) * 100));
+    if(g0.maxY > 0) b.posY = Math.min(100, Math.max(0, start.posY - dy / (2 * g0.maxY) * 100));
+
+    layoutBg();
+    syncBgInputs();
+  });
+
+  const end = e => {
+    if(!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    try { area.releasePointerCapture(e.pointerId); } catch(err){}
+    if(pts.size === 0){ start = null; save(); }
+    else begin();            // 손가락 하나를 떼면 남은 손가락 기준으로 다시 잡는다
+  };
+  area.addEventListener('pointerup', end);
+  area.addEventListener('pointercancel', end);
+
+  /* 데스크톱: 휠로 확대 */
+  area.addEventListener('wheel', e => {
+    if(!state.bg.img) return;
+    e.preventDefault();
+    state.bg.zoom = Math.min(400, Math.max(100, Math.round(state.bg.zoom - e.deltaY * 0.15)));
+    layoutBg(); syncBgInputs(); save();
+  }, {passive:false});
+}
+
+function syncBgInputs(){
+  for(const p of ['bg.posX','bg.posY','bg.zoom']){
+    const el = document.querySelector(`[data-bind="${p}"]`);
+    if(el) el.value = Math.round(getPath(state, p));
+    const out = document.querySelector(`[data-val="${p}"]`);
+    if(out) out.textContent = Math.round(getPath(state, p)) + (el ? (el.dataset.unit||'') : '');
+  }
+}
+
 function drawBars(){
   const cv = T.bars;
   const w = Math.max(120, Math.round(cv.offsetWidth || cv.getBoundingClientRect().width || 300));
@@ -1036,19 +1170,24 @@ function drawBars(){
   const cx = cv.getContext('2d');
   cx.setTransform(dpr,0,0,dpr,0,0);
   cx.fillStyle = '#fff'; cx.fillRect(0,0,w,h);
+  cx.fillStyle = '#111';
+  for(const [x,bw] of barPattern(barSeed(), w)) cx.fillRect(x, 6, bw, h-12);
+}
 
-  const seed = String(state.info.no || state.info.title || 'TICKET');
+/* 예매번호로 만드는 장식용 줄무늬 (미리보기와 내보내기가 같은 모양을 쓴다) */
+function barSeed(){ return String(state.info.no || state.info.title || 'TICKET'); }
+function barPattern(seed, w){
   let s = 2166136261;
   for(let i=0;i<seed.length;i++){ s ^= seed.charCodeAt(i); s = Math.imul(s, 16777619); }
   const rnd = () => { s ^= s<<13; s ^= s>>>17; s ^= s<<5; return ((s>>>0) % 1000) / 1000; };
-
-  cx.fillStyle = '#111';
+  const out = [];
   let x = 8;
   while(x < w - 8){
     const bw = 1 + Math.floor(rnd()*3);
-    if(rnd() > 0.38) cx.fillRect(x, 6, bw, h-12);
+    if(rnd() > 0.38) out.push([x, bw]);
     x += bw + 1 + Math.floor(rnd()*3);
   }
+  return out;
 }
 
 /* ============================================================
@@ -1207,6 +1346,7 @@ let wakeLock = null, ctrlTimer = null;
 async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
+  layoutBg();
   buildMarquee();
   if(state.look.info && state.look.code) drawBars();
   hideCtrlSoon();
@@ -1217,6 +1357,7 @@ function closePreview(){
   $('#fs').hidden = true;
   $('#fsCtrl').classList.remove('dim');
   clearTimeout(ctrlTimer);
+  layoutBg();
   buildMarquee();
   if(state.look.info && state.look.code) drawBars();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
@@ -1250,6 +1391,269 @@ async function importJson(file){
     afterLoad(); save();
     toast('가져왔습니다');
   } catch(e){ toast('가져오지 못했습니다 (파일 형식 확인)'); }
+}
+
+/* ============================================================
+   10-2. 이미지(PNG)로 저장
+   티켓을 390×844 짜리 숨은 칸에 똑같이 깔아 놓고, 거기서 잰 좌표대로 캔버스에 다시 그린다.
+   배치는 브라우저가 해 주므로 화면과 어긋나지 않는다.
+   ============================================================ */
+const EX_W = 390, EX_H = 844, EX_SCALE = 3;
+const marqueeUnitText = () => {
+  const m = state.mq;
+  const t = (m.text || '').trim() || ' ';
+  const sep = m.sep || '  •  ';
+  return t + (m.clock ? ' ' + sep.trim() + ' ' + clockText() : '') + sep;
+};
+
+function pathRound(cx, x, y, w, h, r){
+  const rr = Math.min(r, w/2, h/2);
+  cx.beginPath();
+  if(cx.roundRect) cx.roundRect(x, y, w, h, rr);
+  else {
+    cx.moveTo(x+rr,y); cx.arcTo(x+w,y,x+w,y+h,rr); cx.arcTo(x+w,y+h,x,y+h,rr);
+    cx.arcTo(x,y+h,x,y,rr); cx.arcTo(x,y,x+w,y,rr); cx.closePath();
+  }
+}
+
+/* 글자가 몇 줄로 끊겼는지는 브라우저에게 물어본다 (Range 로 글자마다 위치를 재서 줄별로 묶는다) */
+function lineBoxes(el, base){
+  const node = el.firstChild;
+  if(!node || node.nodeType !== 3) return [];
+  const text = node.nodeValue || '';
+  const range = document.createRange();
+  const out = [];
+  let cur = null;
+  for(let i = 0; i < text.length; i++){
+    range.setStart(node, i); range.setEnd(node, i + 1);
+    const r = range.getBoundingClientRect();
+    if(!r.width && !r.height){ if(cur) cur.text += text[i]; continue; }
+    if(!cur || Math.abs(r.top - cur.rawTop) > 1){
+      cur = { rawTop:r.top, top:r.top-base.top, bottom:r.bottom-base.top,
+              left:r.left-base.left, right:r.right-base.left, text:text[i] };
+      out.push(cur);
+    } else {
+      cur.text += text[i];
+      cur.left = Math.min(cur.left, r.left - base.left);
+      cur.right = Math.max(cur.right, r.right - base.left);
+      cur.bottom = Math.max(cur.bottom, r.bottom - base.top);
+    }
+  }
+  return out;
+}
+
+function drawTextEl(cx, el, base, opt){
+  if(!el) return;
+  const cs = getComputedStyle(el);
+  if(cs.display === 'none' || cs.visibility === 'hidden') return;
+  if(!(el.textContent || '').trim()) return;
+  const lines = lineBoxes(el, base);
+  if(!lines.length) return;
+  const o = opt || {};
+  cx.save();
+  cx.globalAlpha = Number(cs.opacity || 1);
+  cx.fillStyle = cs.color;
+  cx.font = `${cs.fontStyle} ${cs.fontWeight} ${parseFloat(cs.fontSize)}px ${cs.fontFamily}`;
+  if('letterSpacing' in cx) cx.letterSpacing = (cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing);
+  if(o.shadow){ cx.shadowColor = 'rgba(0,0,0,.6)'; cx.shadowBlur = 14; cx.shadowOffsetY = 2; }
+  cx.textBaseline = 'middle';
+  cx.textAlign = o.align || 'left';
+  for(const L of lines){
+    const y = (L.top + L.bottom) / 2;
+    const x = o.align === 'right' ? L.right : o.align === 'center' ? (L.left + L.right)/2 : L.left;
+    cx.fillText(L.text.trim(), x, y);
+  }
+  cx.restore();
+}
+
+function paintBackdrop(cx){
+  const b = state.bg, look = state.look;
+  cx.fillStyle = '#0d0f14';
+  cx.fillRect(0, 0, EX_W, EX_H);
+
+  const g = (b.img && T.img.complete && T.img.naturalWidth) ? bgGeom(EX_W, EX_H) : null;
+  if(g){
+    const k = b.blur > 0 ? (1 + b.blur/90) : 1;
+    const dw = g.dw * k, dh = g.dh * k;
+    const canFilter = 'filter' in cx;
+    if(canFilter && (b.blur || b.gray)) cx.filter = `blur(${b.blur}px) grayscale(${b.gray}%)`;
+    cx.drawImage(T.img, EX_W/2 - dw/2 + g.tx, EX_H/2 - dh/2 + g.ty, dw, dh);
+    if(canFilter) cx.filter = 'none';
+  } else {
+    const lg = cx.createLinearGradient(0, 0, EX_W * 0.8, EX_H);
+    lg.addColorStop(0, '#2a1d3f'); lg.addColorStop(.45, '#121a2e'); lg.addColorStop(1, '#0d0f14');
+    cx.fillStyle = lg; cx.fillRect(0, 0, EX_W, EX_H);
+  }
+
+  if(b.gradient){
+    const vg = cx.createLinearGradient(0, 0, 0, EX_H);
+    vg.addColorStop(0, `rgba(0,0,0,${Math.min(.75, b.dim/100 + .12)})`);
+    vg.addColorStop(.32, `rgba(0,0,0,${b.dim/100})`);
+    vg.addColorStop(1, `rgba(0,0,0,${Math.min(.9, b.dim/100 + .4)})`);
+    cx.fillStyle = vg; cx.fillRect(0, 0, EX_W, EX_H);
+  } else if(b.dim > 0){
+    cx.fillStyle = `rgba(0,0,0,${b.dim/100})`;
+    cx.fillRect(0, 0, EX_W, EX_H);
+  }
+  void look;
+}
+
+function drawTicket(root){
+  const base = root.getBoundingClientRect();
+  const look = state.look, m = state.mq;
+  const q = sel => root.querySelector(sel);
+  const R = el => {
+    const r = el.getBoundingClientRect();
+    return { x:r.left - base.left, y:r.top - base.top, w:r.width, h:r.height };
+  };
+  const shown = el => el && getComputedStyle(el).display !== 'none';
+
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(EX_W * EX_SCALE);
+  cv.height = Math.round(EX_H * EX_SCALE);
+  const cx = cv.getContext('2d');
+  cx.scale(EX_SCALE, EX_SCALE);
+
+  paintBackdrop(cx);
+
+  const sh = { shadow: !!look.shadow };
+
+  /* 상단바 */
+  if(shown(q('.tk-top'))){
+    drawTextEl(cx, q('.tk-top-back'), base, {align:'left', shadow:sh.shadow});
+    drawTextEl(cx, q('.tk-top-title'), base, {align:'center', shadow:sh.shadow});
+    drawTextEl(cx, q('.tk-top-time'), base, {align:'right', shadow:sh.shadow});
+  }
+
+  /* 배지 · 제목 · 부제 */
+  const badge = q('.tk-badge');
+  if(badge && (badge.textContent || '').trim() && shown(q('.tk-head'))){
+    const r = R(badge);
+    cx.save();
+    cx.shadowColor = 'rgba(0,0,0,.35)'; cx.shadowBlur = 14; cx.shadowOffsetY = 4;
+    cx.fillStyle = look.accent;
+    pathRound(cx, r.x, r.y, r.w, r.h, r.h/2); cx.fill();
+    cx.restore();
+    drawTextEl(cx, badge, base, {align:'left'});
+  }
+  if(shown(q('.tk-head'))){
+    drawTextEl(cx, q('.tk-title'), base, {align:'left', shadow:sh.shadow});
+    drawTextEl(cx, q('.tk-sub'), base, {align:'left', shadow:sh.shadow});
+  }
+
+  /* 정보 카드 */
+  const card = q('.tk-card');
+  if(shown(card)){
+    const r = R(card);
+    cx.save();
+    pathRound(cx, r.x, r.y, r.w, r.h, 18);
+    cx.clip();
+    if(look.cardBlur && ('filter' in cx)){
+      cx.filter = `blur(14px)`;
+      paintBackdrop(cx);
+      cx.filter = 'none';
+    }
+    cx.fillStyle = `rgba(10,12,18,${look.cardAlpha/100})`;
+    cx.fillRect(r.x, r.y, r.w, r.h);
+    cx.restore();
+    cx.save();
+    cx.strokeStyle = 'rgba(255,255,255,.14)'; cx.lineWidth = 1;
+    pathRound(cx, r.x + .5, r.y + .5, r.w - 1, r.h - 1, 18); cx.stroke();
+    cx.restore();
+
+    for(const row of root.querySelectorAll('.tk-row')){
+      drawTextEl(cx, row.querySelector('dt'), base, {align:'left'});
+      drawTextEl(cx, row.querySelector('dd'), base, {align:'right'});
+    }
+
+    const perf = q('.tk-perf');
+    if(shown(perf)){
+      const p = R(perf);
+      cx.save();
+      cx.strokeStyle = 'rgba(255,255,255,.45)'; cx.lineWidth = 1; cx.setLineDash([6,6]);
+      cx.beginPath(); cx.moveTo(p.x, p.y + .5); cx.lineTo(p.x + p.w, p.y + .5); cx.stroke();
+      cx.restore();
+      for(const sp of perf.children){
+        const s = R(sp);
+        cx.fillStyle = '#0b0d12';
+        cx.beginPath(); cx.arc(s.x + s.w/2, s.y + s.h/2, s.w/2, 0, Math.PI*2); cx.fill();
+      }
+    }
+
+    const bars = q('.tk-bars');
+    if(shown(bars)){
+      const r2 = R(bars);
+      cx.save();
+      pathRound(cx, r2.x, r2.y, r2.w, r2.h, 6); cx.clip();
+      cx.fillStyle = '#fff'; cx.fillRect(r2.x, r2.y, r2.w, r2.h);
+      cx.fillStyle = '#111';
+      for(const [bx, bw] of barPattern(barSeed(), r2.w)) cx.fillRect(r2.x + bx, r2.y + 6, bw, r2.h - 12);
+      cx.restore();
+      drawTextEl(cx, q('.tk-code-no'), base, {align:'center'});
+    }
+  }
+
+  /* 흐르는 글자 띠 */
+  const mqEl = q('.tk-marquee');
+  if(mqEl){
+    const r = R(mqEl);
+    cx.fillStyle = hexToRgba(m.bg, m.bgAlpha);
+    cx.fillRect(r.x, r.y, r.w, r.h);
+    cx.save();
+    cx.beginPath(); cx.rect(r.x, r.y, r.w, r.h); cx.clip();
+    cx.fillStyle = m.color;
+    cx.font = `${m.italic ? 'italic' : 'normal'} ${m.weight} ${m.size}px ${FONTS[m.font] || FONTS.sans}`;
+    if('letterSpacing' in cx) cx.letterSpacing = m.ls + 'px';
+    if(look.shadow){ cx.shadowColor = 'rgba(0,0,0,.45)'; cx.shadowBlur = 6; cx.shadowOffsetY = 1; }
+    cx.textBaseline = 'middle'; cx.textAlign = 'left';
+    const unit = marqueeUnitText();
+    const uw = Math.max(10, cx.measureText(unit).width);
+    const cy = r.y + r.h / 2;
+    for(let x = r.x; x < r.x + r.w; x += uw) cx.fillText(unit, x, cy);
+    cx.restore();
+  }
+
+  return cv;
+}
+
+async function exportPng(){
+  toast('이미지를 만드는 중…');
+  const host = document.createElement('div');
+  host.setAttribute('aria-hidden', 'true');
+  host.style.cssText =
+    `position:fixed;left:-20000px;top:0;width:${EX_W}px;height:${EX_H}px;pointer-events:none;z-index:-1;`;
+  const clone = T.ticket.cloneNode(true);
+  for(const n of clone.querySelectorAll('[id]')) n.removeAttribute('id');
+  clone.removeAttribute('id');
+  clone.style.width = '100%'; clone.style.height = '100%';
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  try {
+    const cv = drawTicket(clone);
+    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+    if(!blob) throw new Error('blob');
+    const name = (state.name || 'ticket').replace(/[\\/:*?"<>|]/g, '_') + '.png';
+    const file = new File([blob], name, {type:'image/png'});
+
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try {
+        await navigator.share({files:[file], title: state.name || '모바일 티켓'});
+        return;                                   // 공유 창에서 '이미지 저장'
+      } catch(e){
+        if(e && e.name === 'AbortError') return;  // 사용자가 닫음
+      }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 3000);
+    toast('이미지를 내려받았습니다');
+  } catch(e){
+    toast('이미지를 만들지 못했습니다');
+  } finally {
+    host.remove();
+  }
 }
 
 /* ============================================================
@@ -1375,7 +1779,18 @@ function wire(){
 
   $('#btnPreview').addEventListener('click', openPreview);
   $('#btnPreview2').addEventListener('click', openPreview);
-  $('#stage').addEventListener('click', ()=> { if(isMobile()) openPreview(); });
+
+  /* 사진 크기를 모르는 옛 기록은 다 읽힌 뒤에 채워 넣는다 */
+  T.img.addEventListener('load', ()=> {
+    const w = T.img.naturalWidth, h = T.img.naturalHeight;
+    if(w && h && (state.bg.w !== w || state.bg.h !== h)){ state.bg.w = w; state.bg.h = h; }
+    layoutBg();
+  });
+
+  $('#btnBgReset').addEventListener('click', ()=> {
+    state.bg.posX = 50; state.bg.posY = 50; state.bg.zoom = 100;
+    fillForm(); render(); save(); toast('가운데로 되돌렸습니다');
+  });
   $('#btnFsClose').addEventListener('click', closePreview);
   $('#btnFsFull').addEventListener('click', ()=> {
     const el = $('#fs');
@@ -1390,6 +1805,7 @@ function wire(){
   });
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#fs').hidden) closePreview(); });
 
+  $('#btnPng').addEventListener('click', exportPng);
   $('#btnRefresh').addEventListener('click', hardRefresh);
   // document.lastModified = 지금 열려 있는 index.html 이 만들어진 시각.
   // 캐시에서 꺼내 온 옛 화면이면 옛 시각이 찍히므로, 최신인지 눈으로 알 수 있다.
@@ -1421,11 +1837,13 @@ let roTimer = null;
 function wireObservers(){
   if(!window.ResizeObserver) return;
   const ro = new ResizeObserver(() => {
+    layoutBg();
     clearTimeout(roTimer);
     roTimer = setTimeout(() => { buildMarquee(); if(state.look.info && state.look.code) drawBars(); }, 120);
   });
   ro.observe(T.mq);
   ro.observe(T.bars);
+  ro.observe(T.bg);
 }
 
 /* ============================================================
@@ -1485,6 +1903,7 @@ async function hardRefresh(){
   wireTabs();
   wireGrip();
   wireSwipeClose();
+  wireBgGesture();
   wire();
   wireObservers();
 
