@@ -84,6 +84,10 @@
   manifest `theme_color` 제거, HTML `theme-color` 제거, `display` 를 fullscreen/standalone 양쪽으로
   — 전부 해 보고 매번 재설치했지만 844 중 797 이었다(2026-11-27). **더 시도하지 말 것.**
   대신 **그 띠를 흰색으로 칠하게** 두었다(`apple-mobile-web-app-status-bar-style: default`).
+- **`env(safe-area-inset-*)` 에 기능을 걸지 말 것.** 이 값은 `apple-mobile-web-app-status-bar-style`
+  설정에 따라 **0 으로 돌아온다**. 거기에 흰 띠를 걸어 뒀다가 상태표시줄 설정을 바꾸는 순간
+  띠가 통째로 사라졌다(2026-11-27). env 값은 **참고용으로만**(`ENV_T`/`ENV_B`) 읽어서 보여 주고,
+  실제 동작은 사용자가 정하는 값(`bg.safeTop` / `bg.safeBot`)으로 한다.
 - **안전영역 맞춤(`bg.safeFit`, 기본 켜짐).** 받은 칸이 797 이고 아래 34px 은 흰 띠로 비우므로
   사진 칸은 **763px**. 사진을 '폰 화면 전체 캡처'로 보고 가로폭에 맞춘 뒤 위 `SAFE_T`·아래 `SAFE_B`
   만큼 잘라 내면 남는 높이가 763 과 꼭 맞아 **1:1 로 떨어진다**. 화면 비율과 15% 넘게 다른 사진에는

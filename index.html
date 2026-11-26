@@ -425,8 +425,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
               <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
               <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
             </div>
-            <label class="switch"><span>기기 안전영역에 맞추기</span>
+            <label class="switch"><span>안전영역에 맞추기</span>
               <input type="checkbox" data-bind="bg.safeFit"></label>
+            <div class="field"><label>위 잘라내기 <span class="val" data-val="bg.safeTop"></span></label>
+              <input type="range" min="0" max="80" step="1" data-bind="bg.safeTop" data-unit="px"></div>
+            <div class="field"><label>아래 띠 <span class="val" data-val="bg.safeBot"></span></label>
+              <input type="range" min="0" max="80" step="1" data-bind="bg.safeBot" data-unit="px"></div>
+            <div class="field"><label>아래 띠 색</label>
+              <input type="color" data-bind="bg.safeColor"></div>
             <p class="hint" id="safeNote"></p>
             <p class="hint" id="fitNote" hidden></p>
             <p class="hint">셋 다 가로세로 비율은 그대로 둡니다. <b>채우기</b>는 빈 곳이 생기지 않게 채우고,
@@ -639,8 +645,11 @@ function defaults(){
     v: 8,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
-    bg: { img:null, w:0, h:0, fit:'cover', safeFit:true, posX:50, posY:50, zoom:100,
-          dim:0, blur:0, gray:0, gradient:false },
+    /* 위 잘라내기 / 아래 띠 높이는 '직접 정하는 값'이다.
+       env(safe-area-inset-*) 는 상태표시줄 설정에 따라 0 이 되어 버려서 믿을 수 없다. */
+    bg: { img:null, w:0, h:0, fit:'cover',
+          safeFit:true, safeTop:47, safeBot:34, safeColor:'#ffffff',
+          posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
     /* 배경 위에 겹쳐 올리는 사진. 가로는 늘 가운데, 회전 없음.
        y 는 사진 가운데가 놓이는 높이(%), scale 은 티켓 폭 대비 너비(%) */
     ov: { img:null, w:0, h:0, y:50, scale:45, opacity:100, round:0, shadow:false },
@@ -965,10 +974,10 @@ function syncPhotoUI(){
 /* ============================================================
    5. 렌더링
    ============================================================ */
-/* 이 기기의 안전영역. 아이폰13 은 위 47 / 아래 34 다.
-   사진을 '폰 화면을 통째로 찍은 것'으로 보고 이만큼 잘라 내면,
-   남는 높이가 기기가 내준 칸과 꼭 맞아 1:1 로 떨어진다. */
-let SAFE_T = 0, SAFE_B = 0, SCREEN_H = 0;
+/* 기기가 알려 주는 안전영역. 참고용으로만 읽는다 —
+   상태표시줄 설정에 따라 0 으로 돌아오는 일이 있어서 이 값에 기능을 걸면 안 된다.
+   실제로 쓰는 값은 state.bg.safeTop / safeBot (사용자가 직접 정한다). */
+let ENV_T = 0, ENV_B = 0, SCREEN_H = 844;
 function readSafeInsets(){
   try {
     const probe = document.createElement('div');
@@ -976,13 +985,15 @@ function readSafeInsets(){
       'padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
     document.body.appendChild(probe);
     const cs = getComputedStyle(probe);
-    SAFE_T = Math.round(parseFloat(cs.paddingTop) || 0);
-    SAFE_B = Math.round(parseFloat(cs.paddingBottom) || 0);
+    ENV_T = Math.round(parseFloat(cs.paddingTop) || 0);
+    ENV_B = Math.round(parseFloat(cs.paddingBottom) || 0);
     probe.remove();
-  } catch(e){ SAFE_T = SAFE_B = 0; }
-  SCREEN_H = Math.round(screen.height || 0);
+  } catch(e){ ENV_T = ENV_B = 0; }
+  SCREEN_H = Math.round(screen.height || 0) || 844;
 }
-const safeOn = () => !!state.bg.safeFit && SCREEN_H > 0 && (SAFE_T + SAFE_B) > 0;
+const safeTopPx = () => Math.max(0, Number(state.bg.safeTop) || 0);
+const safeBotPx = () => Math.max(0, Number(state.bg.safeBot) || 0);
+const safeOn = () => !!state.bg.safeFit && (safeTopPx() + safeBotPx()) > 0;
 
 const T = {};
 function cacheNodes(){
@@ -995,9 +1006,10 @@ function render(){
   const {bg, look} = state;
 
   // 아래 안전영역은 흰 띠로 비워 둔다 (상태표시줄은 기기가 흰색으로 칠한다)
-  const sb = safeOn() ? SAFE_B : 0;
+  const sb = safeOn() ? safeBotPx() : 0;
   T.ticket.style.setProperty('--tk-safe-b', sb + 'px');
   T.safeBot.hidden = sb <= 0;
+  T.safeBot.style.background = bg.safeColor || '#ffffff';
 
   T.bg.classList.toggle('has-img', !!bg.img);
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
@@ -1023,12 +1035,12 @@ function bgGeom(boxW, boxH){
   const nw = b.w || T.img.naturalWidth, nh = b.h || T.img.naturalHeight;
   if(!nw || !nh || !boxW || !boxH) return null;
   /* 안전영역 맞춤: 사진을 '폰 화면 전체를 찍은 것'으로 보고 가로폭에 맞춘 뒤,
-     위 SAFE_T·아래 SAFE_B 만큼 잘라 낸다. 남는 높이가 칸과 꼭 맞아 1:1 로 떨어진다.
+     위 safeTop·아래 safeBot 만큼 잘라 낸다. 남는 높이가 칸과 꼭 맞아 1:1 로 떨어진다.
      화면 비율과 많이 다른 사진(카메라 사진 등)에는 적용하지 않는다. */
   if(safeOn()){
     const s0 = boxW / nw, dh0 = nh * s0;
     if(Math.abs(dh0 / SCREEN_H - 1) < 0.15){
-      const cut = SAFE_T * (dh0 / SCREEN_H);      // 사진 위에서 잘라 낼 만큼
+      const cut = safeTopPx() * (dh0 / SCREEN_H);   // 사진 위에서 잘라 낼 만큼
       return { nw, nh, s:s0, dw:nw * s0, dh:dh0, maxX:0, maxY:0,
                tx:0, ty: -cut - (boxH - dh0) / 2 };
     }
@@ -1062,12 +1074,10 @@ function updateSafeNote(){
     el.textContent = '끄면 사진을 화면 가득 채웁니다. 상태표시줄·홈 인디케이터 자리와 겹칩니다.';
     return;
   }
-  if(SAFE_T + SAFE_B <= 0){
-    el.textContent = '이 기기에는 안전영역이 없어 그대로 채웁니다. 아이폰에서 열면 적용됩니다.';
-    return;
-  }
-  el.innerHTML = `폰 화면을 찍은 사진으로 보고 <b>위 ${SAFE_T}px · 아래 ${SAFE_B}px</b> 을 잘라
-    그 사이에 1:1 로 넣습니다. 위는 기기의 상태표시줄, 아래 ${SAFE_B}px 은 흰 띠가 됩니다.`;
+  const t = safeTopPx(), b2 = safeBotPx();
+  el.innerHTML = `폰 화면을 찍은 사진으로 보고 <b>위 ${t}px · 아래 ${b2}px</b> 을 잘라
+    남는 ${Math.max(0, SCREEN_H - t - b2)}px 에 1:1 로 넣습니다.
+    아래 ${b2}px 은 아래 띠가 채웁니다. (이 기기가 알려 준 안전영역: 위 ${ENV_T} · 아래 ${ENV_B})`;
 }
 
 function updateFitNote(){
@@ -1528,7 +1538,7 @@ function pathRound(cx, x, y, w, h, r){
 
 function paintBackdrop(cx){
   const b = state.bg, look = state.look;
-  const safeB = safeOn() ? SAFE_B : 0;
+  const safeB = safeOn() ? safeBotPx() : 0;
   const CH = EX_H - safeB;                  // 사진이 들어가는 칸의 높이
   cx.save();
   cx.beginPath(); cx.rect(0, 0, EX_W, CH); cx.clip();
@@ -1566,8 +1576,8 @@ function paintBackdrop(cx){
   drawOverlay(cx);
   cx.restore();
 
-  if(safeB > 0){                            // 아래 안전영역은 흰 띠
-    cx.fillStyle = '#ffffff';
+  if(safeB > 0){                            // 아래 띠
+    cx.fillStyle = b.safeColor || '#ffffff';
     cx.fillRect(0, CH, EX_W, safeB);
   }
   void look;
