@@ -6,7 +6,7 @@
      캐시 우선으로 두면 배포한 내용이 "한 번 더 열어야" 보여서 바뀐 걸 모른다.
    - 그 밖의 파일(아이콘·매니페스트): 캐시 먼저 주고 뒤에서 조용히 갱신. */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `mtm-${VERSION}`;
 const PAGE = 'index.html';
 

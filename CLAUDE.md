@@ -80,7 +80,13 @@
   manifest 의 `display`·`theme_color` 와 `apple-mobile-web-app-status-bar-style` 이 정하는데,
   **이 값들은 홈 화면에 올리는 그 순간에만 읽힌다.** 고쳐 놓고 "왜 그대로죠" 하게 되므로
   반드시 **아이콘을 지우고 다시 올리라고** 안내할 것. 앱 안에도 적어 뒀다.
-  지금은 `display: fullscreen` + manifest `theme_color` 없음으로 둔다.
+  **`theme-color` 를 두지 말 것 — HTML `<meta>` 도, manifest 도.** 이 값이 있으면 아이폰이
+  홈 화면 앱에 불투명 상태표시줄을 씌우고 그만큼 화면을 덜 내준다
+  (아이폰13: 844 중 797 만 받았고 모자란 47px 이 `safe-area-inset-top` 과 같았다).
+  정석 조합은 `display: standalone` + `apple-mobile-web-app-capable: yes`
+  + `apple-mobile-web-app-status-bar-style: black-translucent` + `viewport-fit=cover`, theme-color 없음.
+- **`window.innerHeight` 로 판단하지 말 것.** 아이폰에서 상태표시줄을 뺀 값을 주는 일이 있다.
+  `position:fixed; inset:0` 한 칸을 실제로 재야 '못 받은 것'과 '받았는데 덮인 것'이 갈린다.
 - `updateScreenInfo()` 는 〈기기 화면 / 앱이 받은 화면 / 안전영역〉을 저장 탭에 찍는다.
   이 숫자가 없으면 "못 받은 것"인지 "받았는데 덮인 것"인지 끝내 구분할 수 없다. 지우지 말 것.
 - 전체화면에서 아래로 쓸어 닫기는 **없앴다.** 잠금과 정면으로 부딪친다.

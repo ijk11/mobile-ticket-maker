@@ -6,7 +6,9 @@
 <title>모바일 티켓 메이커</title>
 <meta name="description" content="배경 사진과 하단에 흐르는 글자로 나만의 모바일 티켓을 디자인하는 오프라인 PWA">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b0c10">
+<!-- theme-color 를 두지 않는다. 아이폰 홈 화면 앱에서 이 값이 있으면 '불투명 상태표시줄'이 씌워지고
+     그만큼(아이폰13 기준 47px) 화면을 덜 내줘서 위쪽이 검게 죽는다.
+     아래의 black-translucent 가 들으려면 theme-color 가 없어야 한다. manifest 에도 두지 않는다. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -249,7 +251,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 /* ===== 전체화면 미리보기 ===== */
 /* 화면을 그대로 꽉 채운다. 브라우저 막대 자리 색은 건드리지 않는다 —
    흰색으로 칠해 봤다가 사진 위에 뿌연 띠처럼 보였고, 사진 색에 맞춰 봐도 결국 띠는 띠였다.
-   앱 기본색(theme-color #0b0c10)에 맡기고, 막대를 아예 없애려면 홈 화면에 올려서 연다. */
+   브라우저가 알아서 칠하게 두고, 막대를 아예 없애려면 홈 화면에 올려서 연다. */
 .fs{
   position:fixed;inset:0;z-index:200;background:#000;display:flex;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
