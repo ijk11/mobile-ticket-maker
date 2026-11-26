@@ -246,14 +246,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto;padding-right:var(--mq-gap,24px)}
 
 /* ===== 전체화면 미리보기 ===== */
-/* 브라우저 주소창·상태표시줄 자리는 페이지가 아니라 브라우저가 칠한다(theme-color 와 페이지 배경).
-   그래서 사진이 그 밑으로 들어가지 못한다. 대신 그 자리를 '사진 맨 윗부분 색'으로 칠해서
-   막대가 사진에 묻어 보이게 한다 — openPreview 가 --fs-skin 과 theme-color 를 함께 맞춘다. */
+/* 화면을 그대로 꽉 채운다. 브라우저 막대 자리 색은 건드리지 않는다 —
+   흰색으로 칠해 봤다가 사진 위에 뿌연 띠처럼 보였고, 사진 색에 맞춰 봐도 결국 띠는 띠였다.
+   앱 기본색(theme-color #0b0c10)에 맡기고, 막대를 아예 없애려면 홈 화면에 올려서 연다. */
 .fs{
-  position:fixed;inset:0;z-index:200;background:var(--fs-skin,#0d0f14);display:flex;
+  position:fixed;inset:0;z-index:200;background:#000;display:flex;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
-html.fs-on,html.fs-on body{background:var(--fs-skin,#0d0f14)}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
 /* 전체화면은 잠겨 있다 — 한 점을 HOLD_MS 동안 누르고 있어야 빠져나온다.
    화면에는 아무 표시도 하지 않는다(티켓만 보여야 한다). */
@@ -1283,44 +1282,9 @@ async function newTicket(base){
    ============================================================ */
 let wakeLock = null;
 
-/* 기기의 상태표시줄·홈바 자리는 페이지가 아니라 브라우저가 칠한다.
-   그 색이 theme-color 라서, 전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다. */
-const THEME_APP = '#0b0c10';
-function setThemeColor(c){
-  const m = document.querySelector('meta[name="theme-color"]');
-  if(m) m.setAttribute('content', c);
-}
-
-/* 전체화면일 때 기기 막대(상태표시줄·주소창)에 쓸 색.
-   그 자리는 브라우저가 theme-color 로 칠한다 — 흰색으로 두면 사진 위에 뿌연 흰 띠가 얹힌 것처럼 보인다
-   (아이폰 노치 모델에서 47px짜리 띠로 실제로 나왔다).
-   화면 맨 윗부분을 '내보내기와 똑같은 방법으로' 아주 작게 그려서 그 평균색을 가져온다.
-   paintBackdrop 을 그대로 쓰므로 어둡게·그라디언트·흑백·겹친 사진까지 반영된다. */
-function fsSkinColor(){
-  const base = '#0d0f14';
-  try {
-    const W = 12, H = 3, STRIP = EX_H * 0.06;      // 위 6% 만 담는다
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const cx = cv.getContext('2d');
-    cx.scale(W / EX_W, H / STRIP);
-    paintBackdrop(cx);                             // 바탕색 → 사진 → 어둡게 → 겹친 사진
-    const d = cx.getImageData(0, 0, W, H).data;
-    let r = 0, g = 0, b = 0, n = 0;
-    for(let i = 0; i < d.length; i += 4){ r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
-    if(!n) return base;
-    const hx = v => Math.max(0, Math.min(255, Math.round(v / n))).toString(16).padStart(2, '0');
-    return '#' + hx(r) + hx(g) + hx(b);
-  } catch(e){ return base; }
-}
-
 async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
-  const skin = fsSkinColor();
-  document.documentElement.style.setProperty('--fs-skin', skin);
-  document.documentElement.classList.add('fs-on');
-  setThemeColor(skin);
   layoutBg();
   buildMarquee();
   holdCancel();
@@ -1334,9 +1298,6 @@ function closePreview(){
   holdCancel();
   $('#phoneScreen').appendChild(T.ticket);
   $('#fs').hidden = true;
-  document.documentElement.classList.remove('fs-on');
-  document.documentElement.style.removeProperty('--fs-skin');
-  setThemeColor(THEME_APP);
   layoutBg();
   buildMarquee();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
