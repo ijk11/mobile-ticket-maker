@@ -416,10 +416,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
               <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
               <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
             </div>
-            <p class="hint"><b>가로 맞춤</b>은 사진 폭을 화면 폭에 딱 맞춥니다. 좌우가 잘리지 않고
-              비율도 그대로라, 폰 화면을 찍은 사진이면 위아래까지 꼭 맞습니다.
-              사진이 화면보다 짧으면 위아래가 비는데, 없는 부분을 지어내지는 않습니다 —
-              그때는 <b>채우기</b>로 바꾸거나 확대를 조금 올리세요.</p>
+            <p class="hint" id="fitNote" hidden></p>
+            <p class="hint">셋 다 가로세로 비율은 그대로 둡니다. <b>채우기</b>는 빈 곳이 생기지 않게 채우고,
+              <b>가로 맞춤</b>은 좌우를 한 번도 자르지 않습니다. <b>전체 보기</b>는 사진 전체를 넣습니다.</p>
           </div>
           <div class="field"><label>가로 위치 <span class="val" data-val="bg.posX"></span></label>
             <input type="range" min="0" max="100" step="1" data-bind="bg.posX" data-unit="%"></div>
@@ -620,10 +619,10 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 7,
+    v: 8,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
-    bg: { img:null, w:0, h:0, fit:'width', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
+    bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
     /* 배경 위에 겹쳐 올리는 사진. 가로는 늘 가운데, 회전 없음.
        y 는 사진 가운데가 놓이는 높이(%), scale 은 티켓 폭 대비 너비(%) */
     ov: { img:null, w:0, h:0, y:50, scale:45, opacity:100, round:0, shadow:false },
@@ -646,7 +645,7 @@ function defaults(){
 const OLD = {
   mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85,
         size:15, weight:800, ls:0, speed:70, gap:24, lift:0 },
-  bg: { dim:35, gradient:true, fit:'cover' }
+  bg: { dim:35, gradient:true }
 };
 /* 더는 쓰지 않는 항목. 예전에 저장해 둔 티켓에서 치워 둔다(내보낸 .json 도 깔끔해진다) */
 const GONE = {
@@ -658,7 +657,7 @@ const GONE = {
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 7) return rec;
+  if(v >= 8) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -689,10 +688,12 @@ function migrate(rec){
     if(m.gap  === OLD.mq.gap)  m.gap  = d.mq.gap;
     if(m.lift === OLD.mq.lift) m.lift = d.mq.lift;
   }
-  if(v < 7 && b){
-    if(b.fit === OLD.bg.fit) b.fit = d.bg.fit;   // 채우기(옛 기본값) → 가로 맞춤
+  if(v < 8 && b){
+    // v7 에서 가로 맞춤을 기본으로 돌렸다가 되돌렸다.
+    // 세로가 짧은 사진에서 위아래가 비는 게 더 큰 문제였다(2026-11-27).
+    if(b.fit === 'width') b.fit = d.bg.fit;
   }
-  rec.v = 7;
+  rec.v = 8;
   return rec;
 }
 
@@ -960,6 +961,7 @@ function render(){
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
   layoutBg();
   layoutOv();
+  updateFitNote();
 
   const dim = `rgba(0,0,0,${bg.dim/100})`;
   T.veil.style.background = bg.gradient
@@ -993,6 +995,34 @@ function bgGeom(boxW, boxH){
     tx: (0.5 - b.posX / 100) * 2 * maxX,
     ty: (0.5 - b.posY / 100) * 2 * maxY
   };
+}
+
+/* 이 사진이 화면 비율과 얼마나 다른지, 그래서 무엇이 잘리거나 비는지 미리 알려 준다.
+   "왜 딱 안 맞지?" 가 눈에 보이지 않는 기하학이라서 글로 적어 준다. */
+function updateFitNote(){
+  const el = document.getElementById('fitNote');
+  if(!el) return;
+  const b = state.bg;
+  const nw = b.w || T.img.naturalWidth, nh = b.h || T.img.naturalHeight;
+  if(!b.img || !nw || !nh){ el.hidden = true; return; }
+  el.hidden = false;
+
+  const want = EX_H / EX_W;          // 화면의 세로/가로
+  const have = nh / nw;              // 사진의 세로/가로
+  const d = have / want - 1;
+
+  if(Math.abs(d) < 0.005){
+    el.innerHTML = '이 사진은 <b>화면 비율과 꼭 맞습니다.</b> 어느 쪽으로 둬도 잘리거나 남는 곳이 없습니다.';
+  } else if(d > 0){
+    const cut = Math.round(d / (1 + d) * 100);
+    el.innerHTML = `이 사진은 화면보다 <b>세로로 깁니다.</b> 좌우는 그대로 다 보이고,
+      위아래만 합쳐 약 ${cut}% 잘립니다. 어느 쪽으로 둬도 빈 곳은 생기지 않습니다.`;
+  } else {
+    const n = Math.round(-d * 100);
+    el.innerHTML = `이 사진은 화면보다 <b>가로로 넓습니다.</b> 그래서 둘 중 하나를 골라야 합니다 —
+      <b>채우기</b>는 좌우를 약 ${n}% 자르고, <b>가로 맞춤</b>은 좌우를 다 보여 주는 대신
+      위아래가 약 ${n}% 빕니다. 둘 다 피하려면 사진을 세로로 더 길게 잘라서 넣으세요.`;
+  }
 }
 
 function layoutBg(){
@@ -1662,7 +1692,7 @@ function wire(){
   T.img.addEventListener('load', ()=> {
     const w = T.img.naturalWidth, h = T.img.naturalHeight;
     if(w && h && (state.bg.w !== w || state.bg.h !== h)){ state.bg.w = w; state.bg.h = h; }
-    layoutBg();
+    layoutBg(); updateFitNote();
   });
 
   $('#btnBgReset').addEventListener('click', ()=> {
