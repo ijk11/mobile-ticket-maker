@@ -246,13 +246,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto;padding-right:var(--mq-gap,24px)}
 
 /* ===== 전체화면 미리보기 ===== */
-/* 기기의 상태표시줄/홈바 자리는 브라우저가 theme-color 와 페이지 배경으로 칠한다.
-   전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다 (openPreview 가 함께 바꾼다) */
+/* 브라우저 주소창·상태표시줄 자리는 페이지가 아니라 브라우저가 칠한다(theme-color 와 페이지 배경).
+   그래서 사진이 그 밑으로 들어가지 못한다. 대신 그 자리를 '사진 맨 윗부분 색'으로 칠해서
+   막대가 사진에 묻어 보이게 한다 — openPreview 가 --fs-skin 과 theme-color 를 함께 맞춘다. */
 .fs{
-  position:fixed;inset:0;z-index:200;background:#fff;display:flex;
+  position:fixed;inset:0;z-index:200;background:var(--fs-skin,#0d0f14);display:flex;
   -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
 }
-html.fs-on,html.fs-on body{background:#fff}
+html.fs-on,html.fs-on body{background:var(--fs-skin,#0d0f14)}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
 /* 전체화면은 잠겨 있다 — 한 점을 HOLD_MS 동안 누르고 있어야 빠져나온다.
    화면에는 아무 표시도 하지 않는다(티켓만 보여야 한다). */
@@ -1280,17 +1281,54 @@ let wakeLock = null;
 
 /* 기기의 상태표시줄·홈바 자리는 페이지가 아니라 브라우저가 칠한다.
    그 색이 theme-color 라서, 전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다. */
-const THEME_APP = '#0b0c10', THEME_FS = '#ffffff';
+const THEME_APP = '#0b0c10';
 function setThemeColor(c){
   const m = document.querySelector('meta[name="theme-color"]');
   if(m) m.setAttribute('content', c);
 }
 
+/* 전체화면일 때 기기 막대에 쓸 색 = 사진 맨 윗부분의 평균색.
+   흰색으로 두면 사진 위에 뿌연 띠가 얹힌 것처럼 보인다. 사진 색을 그대로 쓰면 눈에 덜 띈다.
+   (막대 자체는 브라우저 것이라 페이지가 없앨 수 없다 — 홈 화면에 올려서 열면 아예 사라진다) */
+function fsSkinColor(){
+  const base = '#0d0f14';
+  try {
+    const b = state.bg;
+    if(!b.img || !T.img.complete || !T.img.naturalWidth) return base;
+    const g = bgGeom(EX_W, EX_H);
+    if(!g) return base;
+    const W = 12, H = 3, STRIP = EX_H * 0.07;      // 위 7% 만 아주 작게 그려서 평균을 낸다
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const cx = cv.getContext('2d');
+    cx.scale(W / EX_W, H / STRIP);
+    cx.drawImage(T.img, EX_W/2 - g.dw/2 + g.tx, EX_H/2 - g.dh/2 + g.ty, g.dw, g.dh);
+    const d = cx.getImageData(0, 0, W, H).data;
+    let r = 0, gg = 0, bb = 0, n = 0;
+    for(let i = 0; i < d.length; i += 4){
+      if(d[i+3] < 8) continue;                     // 사진이 닿지 않은 자리
+      r += d[i]; gg += d[i+1]; bb += d[i+2]; n++;
+    }
+    if(!n) return base;
+    r /= n; gg /= n; bb /= n;
+    if(b.gray > 0){                                // 흑백 설정만큼 섞는다
+      const y = 0.299*r + 0.587*gg + 0.114*bb, k = b.gray / 100;
+      r += (y - r) * k; gg += (y - gg) * k; bb += (y - bb) * k;
+    }
+    const veil = b.gradient ? Math.min(.75, b.dim/100 + .12) : b.dim/100;
+    const f = 1 - Math.max(0, Math.min(1, veil));  // 어둡게 설정만큼 눌러 준다
+    const hx = v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0');
+    return '#' + hx(r) + hx(gg) + hx(bb);
+  } catch(e){ return base; }
+}
+
 async function openPreview(){
   $('#fsStage').appendChild(T.ticket);
   $('#fs').hidden = false;
+  const skin = fsSkinColor();
+  document.documentElement.style.setProperty('--fs-skin', skin);
   document.documentElement.classList.add('fs-on');
-  setThemeColor(THEME_FS);
+  setThemeColor(skin);
   layoutBg();
   buildMarquee();
   holdCancel();
@@ -1305,6 +1343,7 @@ function closePreview(){
   $('#phoneScreen').appendChild(T.ticket);
   $('#fs').hidden = true;
   document.documentElement.classList.remove('fs-on');
+  document.documentElement.style.removeProperty('--fs-skin');
   setThemeColor(THEME_APP);
   layoutBg();
   buildMarquee();
