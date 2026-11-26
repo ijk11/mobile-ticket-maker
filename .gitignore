@@ -1,0 +1,17 @@
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# 편집기
+.vscode/
+.idea/
+*.swp
+*~
+
+# 작업 중 생기는 것
+node_modules/
+*.log
+/tmp/
+*.local.*
