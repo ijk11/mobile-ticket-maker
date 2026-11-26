@@ -19,7 +19,7 @@
 | 파일 | 하는 일 |
 | --- | --- |
 | `index.html` | 상태 모델 · IndexedDB 저장 · 렌더링 · 흐르는 글자 · 전체화면 미리보기 |
-| `sw.js` | 앱 껍데기 캐시 (stale-while-revalidate). 파일을 늘리면 `SHELL` 과 `VERSION` 을 함께 고친다 |
+| `sw.js` | 앱 껍데기 캐시. 파일을 늘리면 `SHELL` 과 `VERSION` 을 함께 고친다 |
 | `manifest.webmanifest` | 설치 정보 |
 | `tools/make-icons.mjs` | 아이콘 PNG를 코드로 그린다 (`node tools/make-icons.mjs`) |
 | `tools/serve.mjs` | 로컬 확인용 정적 서버 (`node tools/serve.mjs`) |
@@ -49,3 +49,11 @@
   `[hidden]{display:none !important}` 규칙을 지운 채로 두지 않는다.
 - 노치/상태표시줄 자리는 `--tk-inset-top` + `env(safe-area-inset-top)` 으로 잡는다. 상단바를 끄면 `.no-top` 이 대신 받는다.
 - 서비스워커는 `file://` 과 일부 내장 브라우저에서는 등록되지 않는다. 확인은 `tools/serve.mjs` + 실제 크롬에서 한다.
+- **페이지(index.html)는 네트워크 우선, 나머지는 캐시 우선.** 페이지까지 캐시 우선으로 두면 배포한 내용이
+  "한 번 더 열어야" 보여서 바뀐 게 없는 것처럼 느껴진다(실제로 그렇게 겪었다). 페이지 요청은
+  `fetch(PAGE, {cache:'no-cache'})` 로 서버에 물어본 뒤, 실패할 때만 캐시로 떨어진다.
+- 새 워커가 자리를 넘겨받으면(`controllerchange`) 한 번만 `location.reload()` 한다.
+  첫 방문에는 넘겨받을 워커가 없으므로 `hadController` 로 걸러서 새로고침 반복을 막는다.
+- 그래도 옛 화면이 남을 때를 위해 **저장 탭에 `최신 버전으로 새로고침`**(`hardRefresh`)을 둔다.
+  캐시를 지우고 다시 여는 것일 뿐, IndexedDB의 티켓은 건드리지 않는다.
+  같은 탭의 `document.lastModified` 를 찍어 두어서 지금 보는 화면이 언제 것인지 눈으로 확인할 수 있다.

@@ -650,6 +650,12 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
             한 번 열어 두면 인터넷이 끊겨도 그대로 열립니다.
           </p>
         </div>
+        <div class="card">
+          <div class="pane-title">앱 버전</div>
+          <p class="hint">저장해 둔 화면이 남아 옛 모습이 보일 때 누르세요. 만든 티켓은 지워지지 않습니다.</p>
+          <button class="btn" id="btnRefresh">최신 버전으로 새로고침</button>
+          <p class="hint" id="buildInfo"></p>
+        </div>
         <p class="hint" style="text-align:center">
           티켓 모양을 꾸며 보는 디자인 도구입니다. 실제 입장권으로는 쓸 수 없습니다.
         </p>
@@ -697,9 +703,10 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 2,
+    v: 3,
     updated: Date.now(),
-    bg: { img:null, fit:'cover', posX:50, posY:50, zoom:100, dim:35, blur:0, gray:0, gradient:true },
+    /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
+    bg: { img:null, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
     mq: {
       text:'캡처화면은 입장이 제한됩니다.', sep:'  •  ', font:'malgun',
       size:15, weight:800, ls:0, pad:11,
@@ -723,17 +730,26 @@ function defaults(){
 
 /* 예전(v1)에 저장해 둔 티켓은, 손대지 않은 기본값만 조용히 새 기본값으로 올린다.
    직접 바꾼 값은 그대로 둔다. */
-const V1_MQ = { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85 };
+const OLD = {
+  mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85 },
+  bg: { dim:35, gradient:true }
+};
 function migrate(rec){
-  if(!rec || typeof rec !== 'object' || (rec.v|0) >= 2) return rec;
-  const d = defaults(), m = rec.mq;
-  if(m){
-    if(m.text === V1_MQ.text)       m.text = d.mq.text;
-    if(m.font === V1_MQ.font)       m.font = d.mq.font;
-    if(m.bg === V1_MQ.bg)           m.bg = d.mq.bg;
-    if(m.bgAlpha === V1_MQ.bgAlpha) m.bgAlpha = d.mq.bgAlpha;
+  if(!rec || typeof rec !== 'object') return rec;
+  const v = rec.v|0;
+  if(v >= 3) return rec;
+  const d = defaults(), m = rec.mq, b = rec.bg;
+  if(v < 2 && m){
+    if(m.text === OLD.mq.text)       m.text = d.mq.text;
+    if(m.font === OLD.mq.font)       m.font = d.mq.font;
+    if(m.bg === OLD.mq.bg)           m.bg = d.mq.bg;
+    if(m.bgAlpha === OLD.mq.bgAlpha) m.bgAlpha = d.mq.bgAlpha;
   }
-  rec.v = 2;
+  if(v < 3 && b){
+    if(b.dim === OLD.bg.dim)           b.dim = d.bg.dim;
+    if(b.gradient === OLD.bg.gradient) b.gradient = d.bg.gradient;
+  }
+  rec.v = 3;
   return rec;
 }
 
@@ -1374,6 +1390,13 @@ function wire(){
   });
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#fs').hidden) closePreview(); });
 
+  $('#btnRefresh').addEventListener('click', hardRefresh);
+  // document.lastModified = 지금 열려 있는 index.html 이 만들어진 시각.
+  // 캐시에서 꺼내 온 옛 화면이면 옛 시각이 찍히므로, 최신인지 눈으로 알 수 있다.
+  const lm = new Date(document.lastModified);
+  $('#buildInfo').textContent = isNaN(lm) ? '' :
+    `지금 보고 있는 화면: ${lm.getFullYear()}.${p2(lm.getMonth()+1)}.${p2(lm.getDate())} ${p2(lm.getHours())}:${p2(lm.getMinutes())}`;
+
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
   $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
@@ -1421,7 +1444,36 @@ window.addEventListener('beforeinstallprompt', e => {
 window.addEventListener('appinstalled', ()=> { $('#btnInstall').hidden = true; toast('홈 화면에 설치했습니다'); });
 
 if('serviceWorker' in navigator && location.protocol !== 'file:'){
-  window.addEventListener('load', ()=> { navigator.serviceWorker.register('sw.js', {scope:'./'}).catch(()=>{}); });
+  // 새 서비스워커가 자리를 넘겨받으면 한 번만 다시 그린다.
+  // (첫 방문은 넘겨받을 이전 워커가 없으므로 그냥 둔다)
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=> {
+    if(!hadController || reloaded) return;
+    reloaded = true;
+    location.reload();
+  });
+  window.addEventListener('load', ()=> {
+    navigator.serviceWorker.register('sw.js', {scope:'./'})
+      .then(reg => { reg.update().catch(()=>{}); })
+      .catch(()=>{});
+  });
+}
+
+/* 그래도 옛 화면이 남아 있을 때 쓰는 비상구 */
+async function hardRefresh(){
+  toast('최신 버전을 받는 중…');
+  try {
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.update().catch(()=>{})));
+    }
+    if(window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch(e){}
+  location.replace(location.pathname + '?r=' + Date.now());
 }
 
 /* ============================================================
