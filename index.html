@@ -189,9 +189,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 /* ===== 티켓 ===== */
 .ticket{
   position:relative;width:100%;height:100%;overflow:hidden;
-  /* 안에 놓이는 건 흐르는 글자 띠 하나뿐이다. 나머지(사진·겹친 사진)는 절대 위치라
-     flex 와 상관이 없다 → 띠를 맨 아래에 붙여 둔다 */
-  display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate;
+  /* 안에 든 것(사진·겹친 사진·띠)이 전부 절대 위치다. isolation 은 홀로그램의
+     mix-blend-mode 가 티켓 밖으로 새지 않게 가둬 두는 것 */
+  isolation:isolate;
   background:#0d0f14;color:#fff;
   /* 사진 위를 꾹 누르면 아이폰 사파리는 "사진 저장" 메뉴를, 안드로이드 크롬은 이미지 메뉴를 띄운다.
      전체화면 잠금이 '5초 꾹 누르기'라서 이 메뉴가 뜨면 손가락이 끊겨 잠금이 풀리지 않는다.
@@ -235,9 +235,11 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 @keyframes sheen{0%{background-position:160% 0}55%,100%{background-position:-60% 0}}
 
 /* ===== 흐르는 글자 ===== */
+/* 띠는 절대 위치다. 바닥에서 얼마나 띄울지는 styleMarquee() 가 bottom 에 % 로 적어 넣는다.
+   px 가 아니라 % 라야 작은 미리보기·전체화면·내보낸 그림에서 자리가 똑같이 잡힌다. */
 .tk-marquee{
-  position:relative;z-index:4;flex:0 0 auto;overflow:hidden;
-  display:flex;align-items:center;
+  position:absolute;left:0;right:0;bottom:0;
+  z-index:4;overflow:hidden;display:flex;align-items:center;
 }
 .mq-track{display:flex;width:max-content;will-change:transform;animation:mq linear infinite}
 @keyframes mq{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
@@ -537,6 +539,8 @@ html.fs-on,html.fs-on body{background:#fff}
             <input type="range" min="-1" max="8" step="0.5" data-bind="mq.ls" data-unit="px"></div>
           <div class="field"><label>띠 높이 <span class="val" data-val="mq.pad"></span></label>
             <input type="range" min="0" max="30" step="1" data-bind="mq.pad" data-unit="px"></div>
+          <div class="field"><label>띠 위치 (바닥에서) <span class="val" data-val="mq.lift"></span></label>
+            <input type="range" min="0" max="92" step="0.5" data-bind="mq.lift" data-unit="%"></div>
           <div class="grid2">
             <div class="field"><label>글자색</label><input type="color" data-bind="mq.color"></div>
             <div class="field"><label>띠 배경색</label><input type="color" data-bind="mq.bg"></div>
@@ -546,7 +550,8 @@ html.fs-on,html.fs-on body{background:#fff}
           <label class="switch"><span>기울임꼴</span><input type="checkbox" data-bind="mq.italic"></label>
           <label class="switch"><span>글자 그림자</span><input type="checkbox" data-bind="look.shadow"></label>
         </div>
-        <p class="hint">문구는 띠 끝까지 같은 간격으로 반복됩니다. 띠 높이를 0 으로 두면 글자에 딱 붙습니다.</p>
+        <p class="hint">문구는 띠 끝까지 같은 간격으로 반복됩니다. 띠 높이를 0 으로 두면 글자에 딱 붙습니다.
+          <b>미리보기에서 띠를 위아래로 끌어</b> 옮길 수도 있습니다 — 슬라이더는 더 미세하게 맞출 때 쓰세요.</p>
       </section>
 
       <!-- 저장 · 설치 -->
@@ -634,6 +639,9 @@ const FONTS = {
    CSS 의 --mq-gap 과 캔버스 내보내기가 같은 값을 쓴다 */
 const MQ_GAP = 1.6;
 
+/* 띠를 바닥에서 띄울 수 있는 최대치(티켓 높이의 %). 더 올리면 화면 위로 잘려 나간다 */
+const MQ_LIFT_MAX = 92;
+
 function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
@@ -648,6 +656,7 @@ function defaults(){
     mq: {
       text:'캡처화면은 입장이 제한됩니다.', font:'malgun',
       size:15, weight:800, ls:0, pad:11,
+      lift:0,                       /* 바닥에서 띄운 높이 — 티켓 높이의 % */
       color:'#ffffff', bg:'#000000', bgAlpha:100,
       speed:70, dir:'left', italic:false, running:true
     },
@@ -1041,24 +1050,28 @@ function wireGesture(){
     const a = [...pts.values()];
     return a.length < 2 ? 0 : Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x) * 180 / Math.PI;
   };
-  /* 겹친 사진 위를 짚었는가 (돌려 놓은 사진은 네모 테두리 기준으로 본다) */
-  const hitOv = (x, y) => {
-    if(!state.ov.img || T.ov.hidden) return false;
-    const r = T.ov.getBoundingClientRect();
+  const inside = (el, x, y) => {
+    const r = el.getBoundingClientRect();
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   };
+  /* 겹친 사진 위를 짚었는가 (돌려 놓은 사진은 네모 테두리 기준으로 본다) */
+  const hitOv = (x, y) => !!state.ov.img && !T.ov.hidden && inside(T.ov, x, y);
+  const hitMq = (x, y) => inside(T.mq, x, y);
   const begin = () => {
     const b = state.bg, o = state.ov;
     start = {
       c: center(), d: spread(), a: angle(), box: T.bg.getBoundingClientRect(),
       posX: b.posX, posY: b.posY, zoom: b.zoom,
-      x: o.x, y: o.y, scale: o.scale, rot: o.rot
+      x: o.x, y: o.y, scale: o.scale, rot: o.rot,
+      lift: Number(state.mq.lift) || 0
     };
   };
 
   area.addEventListener('pointerdown', e => {
     if(pts.size === 0){
-      mode = hitOv(e.clientX, e.clientY) ? 'ov' : 'bg';
+      // 눈에 보이는 순서(띠가 맨 위, 그다음 겹친 사진)대로 짚는다
+      mode = hitMq(e.clientX, e.clientY) ? 'mq'
+           : hitOv(e.clientX, e.clientY) ? 'ov' : 'bg';
       if(mode === 'bg' && !state.bg.img) return;
     }
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
@@ -1075,7 +1088,12 @@ function wireGesture(){
     const dx = now.x - start.c.x, dy = now.y - start.c.y;
     const two = pts.size >= 2 && start.d > 0;
 
-    if(mode === 'ov'){
+    if(mode === 'mq'){
+      /* 흐르는 글자 띠: 위아래로만 옮긴다 */
+      const boxH = start.box.height || 1;
+      state.mq.lift = Math.max(0, Math.min(MQ_LIFT_MAX, start.lift - dy / boxH * 100));
+      T.mq.style.bottom = state.mq.lift + '%';
+    } else if(mode === 'ov'){
       /* 겹친 사진: 끌어서 옮기고, 두 손가락으로 크기와 각도를 바꾼다 */
       const o = state.ov;
       const boxW = start.box.width || 1, boxH = start.box.height || 1;
@@ -1109,9 +1127,11 @@ function wireGesture(){
     if(pts.size === 0){
       start = null;
       // 끌기가 끝나면 값을 정수로 맞춰 둔다 (슬라이더 눈금과 어긋나지 않게)
-      const b = state.bg, o = state.ov;
+      const b = state.bg, o = state.ov, m = state.mq;
       b.posX = Math.round(b.posX); b.posY = Math.round(b.posY);
       o.x = Math.round(o.x); o.y = Math.round(o.y);
+      m.lift = Math.round(m.lift * 2) / 2;      // 슬라이더 눈금(0.5%)에 맞춘다
+      styleMarquee();
       syncBgInputs(); save();
     }
     else begin();            // 손가락 하나를 떼면 남은 손가락 기준으로 다시 잡는다
@@ -1136,11 +1156,14 @@ function wireGesture(){
 }
 
 function syncBgInputs(){
-  for(const p of ['bg.posX','bg.posY','bg.zoom','ov.x','ov.y','ov.scale','ov.rot']){
+  for(const p of ['bg.posX','bg.posY','bg.zoom','ov.x','ov.y','ov.scale','ov.rot','mq.lift']){
     const el = document.querySelector(`[data-bind="${p}"]`);
-    if(el) el.value = Math.round(getPath(state, p));
+    // 끌어서 생긴 소수점을 그 슬라이더의 눈금(step)에 맞춰 둔다
+    const step = el ? (Number(el.step) || 1) : 1;
+    const v = Number((Math.round(getPath(state, p) / step) * step).toFixed(2));
+    if(el) el.value = v;
     const out = document.querySelector(`[data-val="${p}"]`);
-    if(out) out.textContent = Math.round(getPath(state, p)) + (el ? (el.dataset.unit||'') : '');
+    if(out) out.textContent = v + (el ? (el.dataset.unit||'') : '');
   }
 }
 
@@ -1193,8 +1216,12 @@ function styleMarquee(){
   const m = state.mq;
   T.track.style.setProperty('--mq-gap', MQ_GAP + 'em');
   T.mq.style.background = hexToRgba(m.bg, m.bgAlpha);
+  const lift = Math.max(0, Math.min(MQ_LIFT_MAX, Number(m.lift) || 0));
+  T.mq.style.bottom = lift + '%';
   T.mq.style.paddingTop = m.pad + 'px';
-  T.mq.style.paddingBottom = `calc(${m.pad}px + var(--tk-inset-bot))`;
+  // 바닥에 붙어 있을 때만 홈 인디케이터 자리까지 띠가 덮는다.
+  // 띄워 놓은 띠에 그 여백을 주면 글자가 가운데에서 밀린다.
+  T.mq.style.paddingBottom = lift > 0 ? m.pad + 'px' : `calc(${m.pad}px + var(--tk-inset-bot))`;
   T.track.style.color = m.color;
   T.track.style.fontFamily = FONTS[m.font] || FONTS.sans;
   T.track.style.fontSize = m.size + 'px';
