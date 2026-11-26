@@ -571,6 +571,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <p class="hint">저장해 둔 화면이 남아 옛 모습이 보일 때 누르세요. 만든 티켓은 지워지지 않습니다.</p>
           <button class="btn" id="btnRefresh">최신 버전으로 새로고침</button>
           <p class="hint" id="buildInfo"></p>
+          <p class="hint" id="screenInfo" style="font-variant-numeric:tabular-nums"></p>
         </div>
         <p class="hint" style="text-align:center">
           티켓 모양을 꾸며 보는 디자인 도구입니다. 실제 입장권으로는 쓸 수 없습니다.
@@ -1711,6 +1712,8 @@ function wire(){
     `지금 보고 있는 화면: ${lm.getFullYear()}.${p2(lm.getMonth()+1)}.${p2(lm.getDate())} ${p2(lm.getHours())}:${p2(lm.getMinutes())}`;
 
   updateInstallState();
+  updateScreenInfo();
+  window.addEventListener('resize', updateScreenInfo);
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
   $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
@@ -1756,6 +1759,33 @@ function isStandalone(){
            window.matchMedia('(display-mode: fullscreen)').matches;
   } catch(e){ return false; }
 }
+/* 기기가 우리에게 내준 화면이 실제 화면 전체인지 숫자로 보여 준다.
+   아이폰 PWA 에서 아래 곡선 모서리 쪽이 안 쓰이는 것처럼 보일 때,
+   '우리가 못 받은 것'인지 '받았는데 다른 게 덮은 것'인지는 이 숫자로만 구분된다. */
+function updateScreenInfo(){
+  const el = document.getElementById('screenInfo');
+  if(!el) return;
+  let st = 0, sb = 0;
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;' +
+      'padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    st = Math.round(parseFloat(cs.paddingTop) || 0);
+    sb = Math.round(parseFloat(cs.paddingBottom) || 0);
+    probe.remove();
+  } catch(e){}
+  const sw = screen.width, sh = screen.height;
+  const miss = sh - window.innerHeight;
+  el.innerHTML =
+    `기기 화면 ${sw}×${sh} · 앱이 받은 화면 ${window.innerWidth}×${window.innerHeight}` +
+    ` · 안전영역 위 ${st}px 아래 ${sb}px · ${isStandalone() ? '홈 화면 앱' : '브라우저'}<br>` +
+    (miss <= 1
+      ? '→ <b>세로를 전부 받았습니다.</b> 아래가 비어 보인다면 기기가 그 위에 덮는 것입니다.'
+      : `→ <b>세로 ${miss}px 을 못 받았습니다.</b> 그만큼은 페이지가 그릴 수 없는 자리입니다.`);
+}
+
 function updateInstallState(){
   const el = document.getElementById('installState');
   if(!el) return;
