@@ -198,10 +198,7 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
      -webkit-touch-callout 은 상속되므로 티켓 전체에 한 번만 꺼 둔다. */
   -webkit-touch-callout:none;
   -webkit-user-select:none;user-select:none;
-  --tk-inset-bot:0px;                 /* 홈 인디케이터 자리 */
 }
-/* 기기의 안전영역은 전체화면으로 볼 때만 쓴다. 작은 미리보기에 넣으면 빈 띠만 생긴다 */
-#fsStage .ticket{--tk-inset-bot:env(safe-area-inset-bottom,0px)}
 .tk-bg{
   position:absolute;inset:0;z-index:0;overflow:hidden;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
@@ -244,9 +241,9 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .mq-track{display:flex;width:max-content;will-change:transform;animation:mq linear infinite}
 @keyframes mq{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 .mq-half{display:flex;flex:0 0 auto}
-/* 반복 사이의 간격. em 으로 둬서 글자 크기를 바꿔도 비율이 유지되고,
-   내보낸 그림(캔버스)도 같은 식으로 띄운다 */
-.mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto;padding-right:var(--mq-gap,1.6em)}
+/* 반복 사이의 간격(mq.gap). styleMarquee() 가 --mq-gap 에 px 로 적어 넣고,
+   내보낸 그림(캔버스)도 같은 값만큼 띄운다 */
+.mq-unit{display:flex;align-items:center;white-space:pre;flex:0 0 auto;padding-right:var(--mq-gap,24px)}
 
 /* ===== 전체화면 미리보기 ===== */
 /* 기기의 상태표시줄/홈바 자리는 브라우저가 theme-color 와 페이지 배경으로 칠한다.
@@ -257,28 +254,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 }
 html.fs-on,html.fs-on body{background:#fff}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
-/* 전체화면은 잠겨 있다. 한 점을 5초 동안 누르고 있어야 풀린다.
-   눌린 자리에 동그란 게이지가 차오른다 (채우는 시간은 JS 의 HOLD_MS 와 맞춰 둘 것) */
-.fs-hold{position:absolute;display:block;width:96px;height:96px;margin:-48px 0 0 -48px;z-index:210;pointer-events:none}
-.fs-hold circle{fill:none;stroke-width:5;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%}
-.fs-hold-bg{stroke:rgba(255,255,255,.3)}
-.fs-hold-fg{
-  stroke:#fff;stroke-dasharray:276.5;stroke-dashoffset:276.5;
-  filter:drop-shadow(0 1px 4px rgba(0,0,0,.6));
-}
-.fs-hold.go .fs-hold-fg{animation:hold 5s linear forwards}
-/* transition 이 아니라 animation 인 이유: 방금 display:none 에서 나온 요소에는
-   transition 이 걸리지 않아 게이지가 한 번에 차 버린다 */
-@keyframes hold{from{stroke-dashoffset:276.5}to{stroke-dashoffset:0}}
-.fs-hint{
-  position:absolute;left:50%;top:calc(14px + var(--safe-t));transform:translateX(-50%);
-  z-index:210;padding:10px 16px;border-radius:999px;white-space:nowrap;
-  font-size:13px;font-weight:700;color:#fff;
-  background:rgba(12,14,18,.62);backdrop-filter:blur(8px);
-  box-shadow:0 2px 10px rgba(0,0,0,.4);
-  transition:opacity .5s;pointer-events:none;
-}
-.fs-hint.dim{opacity:0}
+/* 전체화면은 잠겨 있다 — 한 점을 HOLD_MS 동안 누르고 있어야 빠져나온다.
+   화면에는 아무 표시도 하지 않는다(티켓만 보여야 한다). */
 
 /* ===== 토스트 · 시트 ===== */
 .toast{
@@ -480,23 +457,19 @@ html.fs-on,html.fs-on body{background:#fff}
           <div class="stack" id="ovTools" hidden>
             <div class="field"><label>크기 <span class="val" data-val="ov.scale"></span></label>
               <input type="range" min="5" max="300" step="1" data-bind="ov.scale" data-unit="%"></div>
-            <div class="field"><label>가로 위치 <span class="val" data-val="ov.x"></span></label>
-              <input type="range" min="0" max="100" step="1" data-bind="ov.x" data-unit="%"></div>
             <div class="field"><label>세로 위치 <span class="val" data-val="ov.y"></span></label>
-              <input type="range" min="0" max="100" step="1" data-bind="ov.y" data-unit="%"></div>
-            <div class="field"><label>회전 <span class="val" data-val="ov.rot"></span></label>
-              <input type="range" min="-180" max="180" step="1" data-bind="ov.rot" data-unit="도"></div>
+              <input type="range" min="0" max="100" step="0.5" data-bind="ov.y" data-unit="%"></div>
             <div class="field"><label>투명도 <span class="val" data-val="ov.opacity"></span></label>
               <input type="range" min="10" max="100" step="1" data-bind="ov.opacity" data-unit="%"></div>
             <div class="field"><label>둥근 모서리 <span class="val" data-val="ov.round"></span></label>
               <input type="range" min="0" max="50" step="1" data-bind="ov.round" data-unit="%"></div>
             <label class="switch"><span>그림자</span><input type="checkbox" data-bind="ov.shadow"></label>
             <div class="btn-row">
-              <button class="btn" id="btnOvReset">가운데로</button>
+              <button class="btn" id="btnOvReset">처음 크기로</button>
               <button class="btn btn-danger" id="btnRemoveOv">겹친 사진 제거</button>
             </div>
-            <p class="hint">미리보기에서 <b>겹친 사진을 바로 끌어</b> 옮기고, <b>두 손가락으로</b> 크기와 각도를 바꿉니다.
-              겹친 사진 밖을 끌면 배경 사진이 움직입니다.</p>
+            <p class="hint">가로는 늘 가운데에 놓입니다. <b>겹친 사진을 위아래로 끌어</b> 높이를 맞추고,
+              <b>두 손가락으로</b> 크기를 바꿉니다. 겹친 사진 밖을 끌면 배경 사진이 움직입니다.</p>
           </div>
         </div>
       </section>
@@ -537,10 +510,12 @@ html.fs-on,html.fs-on body{background:#fff}
             <input type="range" min="300" max="900" step="100" data-bind="mq.weight"></div>
           <div class="field"><label>자간 <span class="val" data-val="mq.ls"></span></label>
             <input type="range" min="-1" max="8" step="0.5" data-bind="mq.ls" data-unit="px"></div>
+          <div class="field"><label>문구 사이 간격 <span class="val" data-val="mq.gap"></span></label>
+            <input type="range" min="0" max="200" step="1" data-bind="mq.gap" data-unit="px"></div>
           <div class="field"><label>띠 높이 <span class="val" data-val="mq.pad"></span></label>
             <input type="range" min="0" max="30" step="1" data-bind="mq.pad" data-unit="px"></div>
           <div class="field"><label>띠 위치 (바닥에서) <span class="val" data-val="mq.lift"></span></label>
-            <input type="range" min="0" max="92" step="0.5" data-bind="mq.lift" data-unit="%"></div>
+            <input type="range" min="-5" max="92" step="0.5" data-bind="mq.lift" data-unit="%"></div>
           <div class="grid2">
             <div class="field"><label>글자색</label><input type="color" data-bind="mq.color"></div>
             <div class="field"><label>띠 배경색</label><input type="color" data-bind="mq.bg"></div>
@@ -584,6 +559,8 @@ html.fs-on,html.fs-on body{background:#fff}
             아이폰 사파리는 <b>공유 → 홈 화면에 추가</b>, 안드로이드 크롬은 <b>메뉴 → 앱 설치</b>.
             한 번 열어 두면 인터넷이 끊겨도 그대로 열립니다.
           </p>
+          <p class="hint"><b>전체화면은 홈 화면에서 연 쪽이 낫습니다.</b> 브라우저로 열면 위아래에
+            주소창·도구막대 자리가 남지만, 홈 화면에 올려 두고 열면 사진이 화면 끝까지 찹니다.</p>
         </div>
         <div class="card">
           <div class="pane-title">앱 버전</div>
@@ -602,11 +579,6 @@ html.fs-on,html.fs-on body{background:#fff}
 
 <div class="fs" id="fs" hidden>
   <div class="fs-stage" id="fsStage"></div>
-  <svg class="fs-hold" id="fsHold" viewBox="0 0 100 100" aria-hidden="true" hidden>
-    <circle class="fs-hold-bg" cx="50" cy="50" r="44"></circle>
-    <circle class="fs-hold-fg" id="fsHoldFg" cx="50" cy="50" r="44"></circle>
-  </svg>
-  <div class="fs-hint" id="fsHint">화면을 <b>5초간 꾹</b> 누르면 빠져나옵니다</div>
 </div>
 
 <div class="sheet-wrap" id="sheet">
@@ -635,30 +607,28 @@ const FONTS = {
   mono:'ui-monospace,"D2Coding",Consolas,"Courier New",monospace'
 };
 
-/* 흐르는 글자가 반복될 때 사이에 두는 간격 (글자 크기의 몇 배인가).
-   CSS 의 --mq-gap 과 캔버스 내보내기가 같은 값을 쓴다 */
-const MQ_GAP = 1.6;
-
-/* 띠를 바닥에서 띄울 수 있는 최대치(티켓 높이의 %). 더 올리면 화면 위로 잘려 나간다 */
-const MQ_LIFT_MAX = 92;
+/* 띠를 바닥에서 띄울 수 있는 범위(티켓 높이의 %).
+   아래로는 조금 더 내려가게 둬서 띠를 화면 끝에 붙이거나 살짝 걸칠 수 있게 한다 */
+const MQ_LIFT_MIN = -5, MQ_LIFT_MAX = 92;
 
 function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 4,
+    v: 5,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
     bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
-    /* 배경 위에 겹쳐 올리는 사진.
-       x·y 는 티켓 안에서 사진 가운데가 놓이는 자리(%), scale 은 티켓 폭 대비 너비(%) */
-    ov: { img:null, w:0, h:0, x:50, y:50, scale:45, rot:0, opacity:100, round:0, shadow:false },
+    /* 배경 위에 겹쳐 올리는 사진. 가로는 늘 가운데, 회전 없음.
+       y 는 사진 가운데가 놓이는 높이(%), scale 은 티켓 폭 대비 너비(%) */
+    ov: { img:null, w:0, h:0, y:50, scale:45, opacity:100, round:0, shadow:false },
     mq: {
       text:'캡처화면은 입장이 제한됩니다.', font:'malgun',
-      size:15, weight:800, ls:0, pad:11,
+      size:13, weight:300, ls:1.5, pad:11,
+      gap:24,                       /* 문구와 문구 사이 간격(px) */
       lift:0,                       /* 바닥에서 띄운 높이 — 티켓 높이의 % */
       color:'#ffffff', bg:'#000000', bgAlpha:100,
-      speed:70, dir:'left', italic:false, running:true
+      speed:60, dir:'left', italic:false, running:true
     },
     /* 티켓에 남는 건 〈배경 사진 + 겹친 사진 + 흐르는 글자〉뿐이다.
        그림자는 흐르는 글자에, 반짝임은 사진 위에 걸린다 */
@@ -669,19 +639,21 @@ function defaults(){
 /* 예전(v1)에 저장해 둔 티켓은, 손대지 않은 기본값만 조용히 새 기본값으로 올린다.
    직접 바꾼 값은 그대로 둔다. */
 const OLD = {
-  mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85 },
+  mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85,
+        size:15, weight:800, ls:0, speed:70 },
   bg: { dim:35, gradient:true }
 };
 /* 더는 쓰지 않는 항목. 예전에 저장해 둔 티켓에서 치워 둔다(내보낸 .json 도 깔끔해진다) */
 const GONE = {
   root: ['info'],
   look: ['info','accent','text','font','titleSize','cardAlpha','cardBlur','topbar','topTitle','topClock','code'],
-  mq:   ['sep','clock']
+  mq:   ['sep','clock'],
+  ov:   ['x','rot']
 };
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 4) return rec;
+  if(v >= 5) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -698,7 +670,17 @@ function migrate(rec){
     if(rec.look) for(const k of GONE.look) delete rec.look[k];
     if(m)        for(const k of GONE.mq)   delete m[k];
   }
-  rec.v = 4;
+  if(v < 5){
+    if(m){
+      if(m.size   === OLD.mq.size)   m.size   = d.mq.size;
+      if(m.weight === OLD.mq.weight) m.weight = d.mq.weight;
+      if(m.ls     === OLD.mq.ls)     m.ls     = d.mq.ls;
+      if(m.speed  === OLD.mq.speed)  m.speed  = d.mq.speed;
+    }
+    // 가로 위치·회전은 조절칸을 없앴으니 값도 치운다
+    if(rec.ov) for(const k of GONE.ov) delete rec.ov[k];
+  }
+  rec.v = 5;
   return rec;
 }
 
@@ -905,7 +887,7 @@ async function loadPhoto(file, which){
       slot.w = w; slot.h = h;
     }
 
-    if(ov){ slot.x = 50; slot.y = 50; slot.scale = 45; slot.rot = 0; }
+    if(ov){ slot.y = 50; slot.scale = 45; }
     else  { slot.posX = 50; slot.posY = 50; slot.zoom = 100; }
 
     fillForm(); render(); save(); syncPhotoUI();
@@ -1020,9 +1002,9 @@ function layoutOv(){
   if(im.getAttribute('src') !== o.img) im.src = o.img;
   im.hidden = false;
   im.style.width  = Math.max(1, o.scale) + '%';
-  im.style.left   = o.x + '%';
+  im.style.left   = '50%';                  // 가로는 늘 가운데
   im.style.top    = o.y + '%';
-  im.style.transform = `translate(-50%,-50%) rotate(${o.rot}deg)`;
+  im.style.transform = 'translate(-50%,-50%)';
   im.style.opacity = String(Math.max(5, o.opacity) / 100);
   im.style.borderRadius = o.round + '%';
   // box-shadow 는 네모 상자의 그림자라서 투명한 PNG 면 모양이 어긋난다.
@@ -1046,10 +1028,6 @@ function wireGesture(){
     const a = [...pts.values()];
     return a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
   };
-  const angle = () => {
-    const a = [...pts.values()];
-    return a.length < 2 ? 0 : Math.atan2(a[1].y - a[0].y, a[1].x - a[0].x) * 180 / Math.PI;
-  };
   const inside = (el, x, y) => {
     const r = el.getBoundingClientRect();
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
@@ -1060,9 +1038,9 @@ function wireGesture(){
   const begin = () => {
     const b = state.bg, o = state.ov;
     start = {
-      c: center(), d: spread(), a: angle(), box: T.bg.getBoundingClientRect(),
+      c: center(), d: spread(), box: T.bg.getBoundingClientRect(),
       posX: b.posX, posY: b.posY, zoom: b.zoom,
-      x: o.x, y: o.y, scale: o.scale, rot: o.rot,
+      y: o.y, scale: o.scale,
       lift: Number(state.mq.lift) || 0
     };
   };
@@ -1091,20 +1069,13 @@ function wireGesture(){
     if(mode === 'mq'){
       /* 흐르는 글자 띠: 위아래로만 옮긴다 */
       const boxH = start.box.height || 1;
-      state.mq.lift = Math.max(0, Math.min(MQ_LIFT_MAX, start.lift - dy / boxH * 100));
+      state.mq.lift = Math.max(MQ_LIFT_MIN, Math.min(MQ_LIFT_MAX, start.lift - dy / boxH * 100));
       T.mq.style.bottom = state.mq.lift + '%';
     } else if(mode === 'ov'){
-      /* 겹친 사진: 끌어서 옮기고, 두 손가락으로 크기와 각도를 바꾼다 */
+      /* 겹친 사진: 위아래로만 옮기고, 두 손가락으로 크기를 바꾼다 (가로·회전은 고정) */
       const o = state.ov;
-      const boxW = start.box.width || 1, boxH = start.box.height || 1;
-      if(two){
-        o.scale = Math.min(300, Math.max(5, Math.round(start.scale * (spread() / start.d))));
-        let da = angle() - start.a;
-        if(da >  180) da -= 360;
-        if(da < -180) da += 360;
-        o.rot = Math.round(((start.rot + da + 540) % 360) - 180);
-      }
-      o.x = Math.min(100, Math.max(0, start.x + dx / boxW * 100));
+      const boxH = start.box.height || 1;
+      if(two) o.scale = Math.min(300, Math.max(5, Math.round(start.scale * (spread() / start.d))));
       o.y = Math.min(100, Math.max(0, start.y + dy / boxH * 100));
       layoutOv();
     } else {
@@ -1129,8 +1100,8 @@ function wireGesture(){
       // 끌기가 끝나면 값을 정수로 맞춰 둔다 (슬라이더 눈금과 어긋나지 않게)
       const b = state.bg, o = state.ov, m = state.mq;
       b.posX = Math.round(b.posX); b.posY = Math.round(b.posY);
-      o.x = Math.round(o.x); o.y = Math.round(o.y);
-      m.lift = Math.round(m.lift * 2) / 2;      // 슬라이더 눈금(0.5%)에 맞춘다
+      o.y = Math.round(o.y * 2) / 2;            // 슬라이더 눈금(0.5%)에 맞춘다
+      m.lift = Math.round(m.lift * 2) / 2;
       styleMarquee();
       syncBgInputs(); save();
     }
@@ -1156,7 +1127,7 @@ function wireGesture(){
 }
 
 function syncBgInputs(){
-  for(const p of ['bg.posX','bg.posY','bg.zoom','ov.x','ov.y','ov.scale','ov.rot','mq.lift']){
+  for(const p of ['bg.posX','bg.posY','bg.zoom','ov.y','ov.scale','mq.lift']){
     const el = document.querySelector(`[data-bind="${p}"]`);
     // 끌어서 생긴 소수점을 그 슬라이더의 눈금(step)에 맞춰 둔다
     const step = el ? (Number(el.step) || 1) : 1;
@@ -1214,14 +1185,14 @@ function applySpeed(){
 
 function styleMarquee(){
   const m = state.mq;
-  T.track.style.setProperty('--mq-gap', MQ_GAP + 'em');
+  T.track.style.setProperty('--mq-gap', (Number(m.gap) || 0) + 'px');
   T.mq.style.background = hexToRgba(m.bg, m.bgAlpha);
-  const lift = Math.max(0, Math.min(MQ_LIFT_MAX, Number(m.lift) || 0));
+  const lift = Math.max(MQ_LIFT_MIN, Math.min(MQ_LIFT_MAX, Number(m.lift) || 0));
   T.mq.style.bottom = lift + '%';
+  // 위아래 여백은 같다. 홈 인디케이터 자리를 따로 비우지 않는다 —
+  // 그만큼 글자 아래에 빈 공간이 남아 띠가 바닥에 붙지 않는 것처럼 보였다.
   T.mq.style.paddingTop = m.pad + 'px';
-  // 바닥에 붙어 있을 때만 홈 인디케이터 자리까지 띠가 덮는다.
-  // 띄워 놓은 띠에 그 여백을 주면 글자가 가운데에서 밀린다.
-  T.mq.style.paddingBottom = lift > 0 ? m.pad + 'px' : `calc(${m.pad}px + var(--tk-inset-bot))`;
+  T.mq.style.paddingBottom = m.pad + 'px';
   T.track.style.color = m.color;
   T.track.style.fontFamily = FONTS[m.font] || FONTS.sans;
   T.track.style.fontSize = m.size + 'px';
@@ -1235,7 +1206,7 @@ function styleMarquee(){
 /* ============================================================
    7. 폼 ↔ 상태
    ============================================================ */
-const REBUILD = new Set(['mq.text','mq.size','mq.weight','mq.ls','mq.font','mq.italic']);
+const REBUILD = new Set(['mq.text','mq.size','mq.weight','mq.ls','mq.gap','mq.font','mq.italic']);
 
 function readEl(el){
   if(el.type === 'checkbox') return el.checked;
@@ -1305,7 +1276,7 @@ async function newTicket(base){
 /* ============================================================
    9. 전체화면 미리보기
    ============================================================ */
-let wakeLock = null, ctrlTimer = null;
+let wakeLock = null;
 
 /* 기기의 상태표시줄·홈바 자리는 페이지가 아니라 브라우저가 칠한다.
    그 색이 theme-color 라서, 전체화면일 때만 흰색으로 바꿔 위아래가 검게 남지 않게 한다. */
@@ -1322,7 +1293,7 @@ async function openPreview(){
   setThemeColor(THEME_FS);
   layoutBg();
   buildMarquee();
-  lockReset();
+  holdCancel();
 
   // 브라우저 주소창까지 숨긴다. 버튼 클릭에서 바로 이어지는 호출이라야 허용된다.
   // (아이폰 사파리는 이 API 가 없다 → 조용히 넘어간다)
@@ -1335,7 +1306,6 @@ function closePreview(){
   $('#fs').hidden = true;
   document.documentElement.classList.remove('fs-on');
   setThemeColor(THEME_APP);
-  clearTimeout(ctrlTimer);
   layoutBg();
   buildMarquee();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
@@ -1346,20 +1316,12 @@ function closePreview(){
    실수로 한 번 스친다고 닫히면 티켓을 내밀 수가 없다. 그래서 전체화면은 잠겨 있고,
    화면의 **한 점**을 HOLD_MS 동안 누르고 있어야 빠져나온다.
    손가락이 HOLD_SLIP 넘게 움직이거나 떼면 처음부터 다시 센다.
-   게이지가 차오르는 시간은 CSS 의 .fs-hold.go 전환 시간과 맞춰 둘 것. */
-const HOLD_MS = 5000, HOLD_SLIP = 24;
+   화면에는 아무 표시도 띄우지 않는다 — 티켓만 보여야 하기 때문이다. */
+const HOLD_MS = 3000, HOLD_SLIP = 24;
 let holdTimer = null, holdFrom = null;
 
 function holdStart(x, y){
-  const el = $('#fsHold');
   holdFrom = {x, y};
-  el.style.left = x + 'px';
-  el.style.top  = y + 'px';
-  // SVG 요소에는 el.hidden 프로퍼티가 없다(HTML 전용). 속성을 직접 지워야 보인다
-  el.removeAttribute('hidden');
-  el.classList.remove('go');
-  void el.getBoundingClientRect();        // 게이지를 처음부터 다시 그리게 한다
-  el.classList.add('go');
   clearTimeout(holdTimer);
   holdTimer = setTimeout(() => {
     try { if(navigator.vibrate) navigator.vibrate(30); } catch(e){}
@@ -1368,17 +1330,6 @@ function holdStart(x, y){
 }
 function holdCancel(){
   clearTimeout(holdTimer); holdTimer = null; holdFrom = null;
-  const el = $('#fsHold');
-  if(!el) return;
-  el.classList.remove('go');
-  el.setAttribute('hidden', '');
-}
-function lockReset(){
-  holdCancel();
-  const hint = $('#fsHint');
-  hint.classList.remove('dim');
-  clearTimeout(ctrlTimer);
-  ctrlTimer = setTimeout(()=> hint.classList.add('dim'), 4500);
 }
 function wireFsLock(){
   const stage = $('#fsStage');
@@ -1478,7 +1429,7 @@ function paintBackdrop(cx){
   void look;
 }
 
-/* 겹친 사진. 화면 CSS(width:%, left:%, top:%, translate(-50%,-50%), rotate)와 같은 식으로 잡는다.
+/* 겹친 사진. 화면 CSS(width:%, left:50%, top:%, translate(-50%,-50%))와 같은 식으로 잡는다.
    둥근 모서리·그림자가 있으면 한 번 따로 그린 뒤 그림자를 입힌다(잘라낸 모양대로 그림자가 생기게). */
 function drawOverlay(cx){
   const o = state.ov;
@@ -1489,6 +1440,7 @@ function drawOverlay(cx){
   const w = EX_W * Math.max(1, o.scale) / 100;
   const h = w * (nh / nw);
   const r = Math.min(w, h) * Math.max(0, Math.min(50, o.round)) / 100;
+  // 가로는 늘 가운데, 회전 없음 — 화면의 layoutOv() 와 같은 규칙
 
   let src = T.ov, sw = w, sh = h;
   if(r > 0){                      // 모서리를 둥글게 자른 뒤라야 그림자도 그 모양을 따라간다
@@ -1504,8 +1456,7 @@ function drawOverlay(cx){
 
   cx.save();
   cx.globalAlpha = Math.max(5, o.opacity) / 100;
-  cx.translate(EX_W * o.x / 100, EX_H * o.y / 100);
-  if(o.rot) cx.rotate(o.rot * Math.PI / 180);
+  cx.translate(EX_W / 2, EX_H * o.y / 100);
   if(o.shadow){ cx.shadowColor = 'rgba(0,0,0,.5)'; cx.shadowBlur = 16; cx.shadowOffsetY = 8; }
   cx.drawImage(src, -sw/2, -sh/2, sw, sh);
   cx.restore();
@@ -1542,8 +1493,8 @@ function drawTicket(root){
     if(look.shadow){ cx.shadowColor = 'rgba(0,0,0,.45)'; cx.shadowBlur = 6; cx.shadowOffsetY = 1; }
     cx.textBaseline = 'middle'; cx.textAlign = 'left';
     const unit = marqueeUnitText();
-    // 화면의 .mq-unit 은 오른쪽에 --mq-gap(=글자 크기의 MQ_GAP 배)만큼 여백을 둔다
-    const uw = Math.max(10, cx.measureText(unit).width + MQ_GAP * m.size);
+    // 화면의 .mq-unit 은 오른쪽에 --mq-gap(= mq.gap px)만큼 여백을 둔다
+    const uw = Math.max(10, cx.measureText(unit).width + (Number(m.gap) || 0));
     const cy = r.y + r.h / 2;
     for(let x = r.x; x < r.x + r.w; x += uw) cx.fillText(unit, x, cy);
     cx.restore();
@@ -1657,7 +1608,7 @@ function wire(){
     state.ov.img = null; render(); save(); syncPhotoUI(); toast('겹친 사진을 제거했습니다');
   });
   $('#btnOvReset').addEventListener('click', ()=> {
-    const o = state.ov; o.x = 50; o.y = 50; o.scale = 45; o.rot = 0;
+    const o = state.ov; o.y = 50; o.scale = 45;
     fillForm(); render(); save(); toast('가운데로 되돌렸습니다');
   });
   /* 크기를 모르는 옛 기록·가져온 파일은 다 읽힌 뒤에 채운다 */
