@@ -1786,25 +1786,35 @@ function isStandalone(){
 function updateScreenInfo(){
   const el = document.getElementById('screenInfo');
   if(!el) return;
-  let st = 0, sb = 0;
+
+  /* 진짜로 그릴 수 있는 칸은 position:fixed; inset:0 한 칸을 직접 재야 안다.
+     window.innerHeight 는 아이폰에서 상태표시줄을 빼고 알려 주는 일이 있어서,
+     '못 받은 것'과 '받았는데 기기가 그 위를 덮은 것'이 구분되지 않는다. */
+  let fw = 0, fh = 0, st = 0, sb = 0;
   try {
     const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;' +
+    probe.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;' +
+      'pointer-events:none;visibility:hidden;z-index:-1;' +
       'padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);';
     document.body.appendChild(probe);
+    const r = probe.getBoundingClientRect();
+    fw = Math.round(r.width); fh = Math.round(r.height);
     const cs = getComputedStyle(probe);
     st = Math.round(parseFloat(cs.paddingTop) || 0);
     sb = Math.round(parseFloat(cs.paddingBottom) || 0);
     probe.remove();
   } catch(e){}
+
   const sw = screen.width, sh = screen.height;
-  const miss = sh - window.innerHeight;
+  const vv = window.visualViewport ? Math.round(window.visualViewport.height) : 0;
+  const miss = sh - fh;
   el.innerHTML =
-    `기기 화면 ${sw}×${sh} · 앱이 받은 화면 ${window.innerWidth}×${window.innerHeight}` +
-    ` · 안전영역 위 ${st}px 아래 ${sb}px · ${isStandalone() ? '홈 화면 앱' : '브라우저'}<br>` +
+    `기기 화면 ${sw}×${sh} · <b>그릴 수 있는 칸 ${fw}×${fh}</b>` +
+    ` · 창 ${window.innerWidth}×${window.innerHeight}${vv ? ' · 보이는 높이 ' + vv : ''}<br>` +
+    `안전영역 위 ${st}px 아래 ${sb}px · ${isStandalone() ? '홈 화면 앱' : '브라우저'}<br>` +
     (miss <= 1
-      ? '→ <b>세로를 전부 받았습니다.</b> 아래가 비어 보인다면 기기가 그 위에 덮는 것입니다.'
-      : `→ <b>세로 ${miss}px 을 못 받았습니다.</b> 그만큼은 페이지가 그릴 수 없는 자리입니다.`);
+      ? '→ <b>화면 전체를 받았습니다.</b> 그래도 위아래가 죽어 보이면 기기가 그 위를 덮는 것입니다.'
+      : `→ <b>세로 ${miss}px 을 못 받았습니다.</b> 그만큼은 페이지가 아예 그릴 수 없는 자리입니다.`);
 }
 
 function updateInstallState(){
