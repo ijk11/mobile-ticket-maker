@@ -642,7 +642,7 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 8,
+    v: 9,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
     /* 위 잘라내기 / 아래 띠 높이는 '직접 정하는 값'이다.
@@ -657,7 +657,7 @@ function defaults(){
       text:'캡처화면은 입장이 제한됩니다.', font:'malgun',
       size:13, weight:300, ls:1.5, pad:11,
       gap:17,                       /* 문구와 문구 사이 간격(px) */
-      lift:4.5,                     /* 바닥에서 띄운 높이 — 티켓 높이의 % */
+      lift:0,                       /* 바닥에서 띄운 높이 — 티켓 높이의 % */
       color:'#ffffff', bg:'#000000', bgAlpha:100,
       speed:60, dir:'left', italic:false, running:true
     },
@@ -684,7 +684,7 @@ const GONE = {
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 8) return rec;
+  if(v >= 9) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -720,7 +720,10 @@ function migrate(rec){
     // 세로가 짧은 사진에서 위아래가 비는 게 더 큰 문제였다(2026-11-27).
     if(b.fit === 'width') b.fit = d.bg.fit;
   }
-  rec.v = 8;
+  if(v < 9 && m){
+    if(m.lift === 4.5) m.lift = d.mq.lift;    // v8 기본값(4.5%) → 바닥에 붙임
+  }
+  rec.v = 9;
   return rec;
 }
 
