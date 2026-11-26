@@ -11,10 +11,9 @@
      아래의 black-translucent 가 들으려면 theme-color 가 없어야 한다. manifest 에도 두지 않는다. -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<!-- black-translucent = 상태표시줄 자리까지 우리가 받아서 직접 그린다.
-     받아지면 위 띠도 우리가 흰색으로 칠한다(FULL_SCREEN 이 true 일 때만).
-     못 받으면(797) 그 자리는 기기가 칠하고 우리는 띠를 그리지 않는다 — 자동으로 갈린다. -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- default = 흰 바탕에 검은 글씨. black-translucent 로 화면 전체를 받으려 해 봤으나
+     아이폰이 상단 47px 을 끝내 내주지 않았다(아이폰13). 그래서 그 띠를 흰색으로 칠하게 둔다. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="티켓 메이커">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="icon" href="assets/icon-192.png">
@@ -204,16 +203,13 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
      -webkit-touch-callout 은 상속되므로 티켓 전체에 한 번만 꺼 둔다. */
   -webkit-touch-callout:none;
   -webkit-user-select:none;user-select:none;
-  --tk-safe-t:0px;                    /* 위 상태표시줄 자리 (받았을 때만) */
-  --tk-safe-b:0px;                    /* 아래 홈 인디케이터 자리 */
+  --tk-safe-b:0px;                    /* 아래 홈 인디케이터 자리 (흰 띠) */
 }
-/* 사진이 들어가는 칸. 위아래 안전영역만큼은 비워 두고 띠가 들어간다 */
+/* 사진이 들어가는 칸. 아래 안전영역만큼은 비워 두고 흰 띠가 들어간다 */
 .tk-bg{
-  position:absolute;inset:var(--tk-safe-t) 0 var(--tk-safe-b) 0;z-index:0;overflow:hidden;
-  background-color:#0d0f14;
+  position:absolute;inset:0 0 var(--tk-safe-b) 0;z-index:0;overflow:hidden;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
 }
-.tk-safe-top{position:absolute;left:0;right:0;top:0;height:var(--tk-safe-t);z-index:1;background:#fff}
 .tk-safe-bot{position:absolute;left:0;right:0;bottom:0;height:var(--tk-safe-b);z-index:1;background:#fff}
 .tk-bg.has-img{background-image:none}
 /* 사진은 img 로 올려 두고 transform 으로 움직인다. 끌기·확대가 부드럽고 계산도 단순하다.
@@ -369,7 +365,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 
         <div class="ticket" id="ticket">
           <div class="tk-bg" id="tkBg"><img class="tk-img" id="tkImg" alt="" hidden></div>
-          <div class="tk-safe-top" id="tkSafeTop" hidden></div>
           <div class="tk-safe-bot" id="tkSafeBot"></div>
           <div class="tk-veil" id="tkVeil"></div>
           <img class="tk-ov" id="tkOv" alt="" hidden>
@@ -985,7 +980,7 @@ function syncPhotoUI(){
 /* 기기가 알려 주는 안전영역. 참고용으로만 읽는다 —
    상태표시줄 설정에 따라 0 으로 돌아오는 일이 있어서 이 값에 기능을 걸면 안 된다.
    실제로 쓰는 값은 state.bg.safeTop / safeBot (사용자가 직접 정한다). */
-let ENV_T = 0, ENV_B = 0, SCREEN_H = 844, FULL_SCREEN = false;
+let ENV_T = 0, ENV_B = 0, SCREEN_H = 844;
 function readSafeInsets(){
   try {
     const probe = document.createElement('div');
@@ -998,29 +993,15 @@ function readSafeInsets(){
     probe.remove();
   } catch(e){ ENV_T = ENV_B = 0; }
   SCREEN_H = Math.round(screen.height || 0) || 844;
-
-  /* 상단 자리까지 실제로 받았는지 — position:fixed; inset:0 한 칸을 직접 재서 본다.
-     받았으면 그 자리를 우리가 흰 띠로 칠하고, 못 받았으면 기기가 칠하도록 비워 둔다. */
-  FULL_SCREEN = false;
-  try {
-    const box = document.createElement('div');
-    box.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;visibility:hidden;' +
-      'pointer-events:none;z-index:-1;';
-    document.body.appendChild(box);
-    FULL_SCREEN = Math.round(box.getBoundingClientRect().height) >= SCREEN_H - 2;
-    box.remove();
-  } catch(e){}
 }
 const safeTopPx = () => Math.max(0, Number(state.bg.safeTop) || 0);
 const safeBotPx = () => Math.max(0, Number(state.bg.safeBot) || 0);
 const safeOn = () => !!state.bg.safeFit && (safeTopPx() + safeBotPx()) > 0;
-/* 위 띠는 '상단까지 받았을 때'만 우리가 그린다. 못 받았으면 거기는 기기 몫이다 */
-const topBandPx = () => (safeOn() && FULL_SCREEN) ? safeTopPx() : 0;
 
 const T = {};
 function cacheNodes(){
   T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.ov=$('#tkOv');
-  T.veil=$('#tkVeil'); T.sheen=$('#tkSheen'); T.safeBot=$('#tkSafeBot'); T.safeTop=$('#tkSafeTop');
+  T.veil=$('#tkVeil'); T.sheen=$('#tkSheen'); T.safeBot=$('#tkSafeBot');
   T.mq=$('#tkMarquee'); T.track=$('#mqTrack');
 }
 
@@ -1028,12 +1009,10 @@ function render(){
   const {bg, look} = state;
 
   // 아래 안전영역은 흰 띠로 비워 둔다 (상태표시줄은 기기가 흰색으로 칠한다)
-  const sb = safeOn() ? safeBotPx() : 0, st = topBandPx();
+  const sb = safeOn() ? safeBotPx() : 0;
   T.ticket.style.setProperty('--tk-safe-b', sb + 'px');
-  T.ticket.style.setProperty('--tk-safe-t', st + 'px');
   T.safeBot.hidden = sb <= 0;
-  T.safeTop.hidden = st <= 0;
-  T.safeBot.style.background = T.safeTop.style.background = bg.safeColor || '#ffffff';
+  T.safeBot.style.background = bg.safeColor || '#ffffff';
 
   T.bg.classList.toggle('has-img', !!bg.img);
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
@@ -1100,11 +1079,8 @@ function updateSafeNote(){
   }
   const t = safeTopPx(), b2 = safeBotPx();
   el.innerHTML = `폰 화면을 찍은 사진으로 보고 <b>위 ${t}px · 아래 ${b2}px</b> 을 잘라
-    남는 ${Math.max(0, SCREEN_H - t - b2)}px 에 1:1 로 넣습니다.<br>` +
-    (FULL_SCREEN
-      ? `위 ${t}px·아래 ${b2}px 모두 <b>앱이 직접</b> 띠를 칠합니다.`
-      : `아래 ${b2}px 은 앱이 칠하고, <b>위 ${t}px 은 기기가 칠합니다</b>(그 자리를 내주지 않았습니다).`) +
-    ` (기기가 알려 준 안전영역: 위 ${ENV_T} · 아래 ${ENV_B})`;
+    남는 ${Math.max(0, SCREEN_H - t - b2)}px 에 1:1 로 넣습니다.
+    아래 ${b2}px 은 아래 띠가 채웁니다. (이 기기가 알려 준 안전영역: 위 ${ENV_T} · 아래 ${ENV_B})`;
 }
 
 function updateFitNote(){
@@ -1565,10 +1541,9 @@ function pathRound(cx, x, y, w, h, r){
 
 function paintBackdrop(cx){
   const b = state.bg, look = state.look;
-  const safeB = safeOn() ? safeBotPx() : 0, safeT = topBandPx();
-  const CH = EX_H - safeT - safeB;          // 사진이 들어가는 칸의 높이
+  const safeB = safeOn() ? safeBotPx() : 0;
+  const CH = EX_H - safeB;                  // 사진이 들어가는 칸의 높이
   cx.save();
-  cx.translate(0, safeT);
   cx.beginPath(); cx.rect(0, 0, EX_W, CH); cx.clip();
   cx.fillStyle = '#0d0f14';
   cx.fillRect(0, 0, EX_W, CH);
@@ -1600,16 +1575,14 @@ function paintBackdrop(cx){
     cx.fillStyle = `rgba(0,0,0,${b.dim/100})`;
     cx.fillRect(0, 0, EX_W, CH);
   }
+  /* 겹친 사진도 배경의 일부다 */
+  drawOverlay(cx);
   cx.restore();
 
-  /* 위아래 띠. 화면에서 .tk-safe-top/.tk-safe-bot 이 하는 일과 같다 */
-  if(safeT > 0 || safeB > 0){
+  if(safeB > 0){                            // 아래 띠
     cx.fillStyle = b.safeColor || '#ffffff';
-    if(safeT > 0) cx.fillRect(0, 0, EX_W, safeT);
-    if(safeB > 0) cx.fillRect(0, EX_H - safeB, EX_W, safeB);
+    cx.fillRect(0, CH, EX_W, safeB);
   }
-  /* 겹친 사진은 띠보다 위에 온다 (화면에서도 z-index 가 그렇다) */
-  drawOverlay(cx);
   void look;
 }
 
