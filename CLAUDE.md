@@ -83,7 +83,9 @@
   **아이폰13 에서 끝내 상단 47px 을 받지 못했다.** `black-translucent`, `viewport-fit=cover`,
   manifest `theme_color` 제거, HTML `theme-color` 제거, `display` 를 fullscreen/standalone 양쪽으로
   — 전부 해 보고 매번 재설치했지만 844 중 797 이었다(2026-11-27). **더 시도하지 말 것.**
-  대신 **그 띠를 흰색으로 칠하게** 두었다(`apple-mobile-web-app-status-bar-style: default`).
+  `black-translucent` 로 두고 **받았는지 실제로 재서 갈라 쓴다**(`FULL_SCREEN`):
+  받았으면 그 자리를 `.tk-safe-top` 으로 우리가 칠하고, 못 받았으면 기기가 칠하도록 비워 둔다.
+  `default` 로 두면 **받는 길 자체가 막힌다** — 문서화된 동작이다. 되돌리지 말 것.
 - **`env(safe-area-inset-*)` 에 기능을 걸지 말 것.** 이 값은 `apple-mobile-web-app-status-bar-style`
   설정에 따라 **0 으로 돌아온다**. 거기에 흰 띠를 걸어 뒀다가 상태표시줄 설정을 바꾸는 순간
   띠가 통째로 사라졌다(2026-11-27). env 값은 **참고용으로만**(`ENV_T`/`ENV_B`) 읽어서 보여 주고,
