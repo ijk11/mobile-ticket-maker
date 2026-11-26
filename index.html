@@ -540,7 +540,8 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <div class="pane-title">완성한 티켓 저장</div>
           <button class="btn btn-primary" id="btnPng">이미지로 저장 (PNG)</button>
           <p class="hint">폰에서는 공유 창이 열립니다. 거기서 <b>이미지 저장</b>을 고르면 사진첩에 들어갑니다.
-            세로 1170 × 2532로 뽑으며, 흐르는 글자는 멈춘 한 장면으로 담깁니다.</p>
+            세로 <b id="pngSize">1170 × 2532</b>로, <b>지금 화면에서 보이는 그대로</b> 뽑습니다.
+            흐르는 글자는 멈춘 한 장면으로 담깁니다.</p>
         </div>
         <div class="card">
           <div class="field"><label>이 티켓 이름</label>
@@ -564,6 +565,10 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
             아이폰 사파리는 <b>공유 → 홈 화면에 추가</b>, 안드로이드 크롬은 <b>메뉴 → 앱 설치</b>.
             한 번 열어 두면 인터넷이 끊겨도 그대로 열립니다.
           </p>
+          <p class="hint"><b>이미 홈 화면에 올려 두셨다면 한 번 지우고 다시 올려 주세요.</b>
+            화면을 끝까지 쓰는 설정은 <b>올리는 그 순간에만</b> 읽히기 때문에,
+            예전에 올린 아이콘은 옛 설정을 그대로 쓰고 있습니다.
+            위아래 둥근 모서리 쪽이 검게 죽는 것도 그래서입니다.</p>
           <p class="hint" id="installState"></p>
         </div>
         <div class="card">
@@ -1415,7 +1420,21 @@ async function importJson(file){
    티켓을 390×844 짜리 숨은 칸에 똑같이 깔아 놓고, 거기서 잰 좌표대로 캔버스에 다시 그린다.
    배치는 브라우저가 해 주므로 화면과 어긋나지 않는다.
    ============================================================ */
-const EX_W = 390, EX_H = 844, EX_SCALE = 3;
+/* 저장되는 그림의 크기. 폰에서는 '지금 이 기기가 내준 화면' 을 그대로 쓴다.
+   390×844 로 못박아 두면, 기기가 797 밖에 안 내줄 때 화면에서 보던 것과
+   저장된 그림의 세로 비율이 어긋난다(아이폰 PWA 에서 실제로 47px 모자랐다). */
+let EX_W = 390, EX_H = 844;
+const EX_SCALE = 3;
+
+function syncExportSize(){
+  if(!isMobile()){ EX_W = 390; EX_H = 844; }
+  else {
+    const w = Math.round(window.innerWidth), h = Math.round(window.innerHeight);
+    if(w >= 280 && h > w){ EX_W = w; EX_H = h; }
+  }
+  const el = document.getElementById('pngSize');
+  if(el) el.textContent = `${EX_W * EX_SCALE} × ${EX_H * EX_SCALE}`;
+}
 const marqueeUnitText = () => ((state.mq.text || '').trim() || ' ');
 
 function pathRound(cx, x, y, w, h, r){
@@ -1540,6 +1559,7 @@ function drawTicket(root){
 }
 
 async function exportPng(){
+  syncExportSize();                       // 지금 화면 크기에 맞춰 뽑는다
   toast('이미지를 만드는 중…');
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
@@ -1712,8 +1732,9 @@ function wire(){
     `지금 보고 있는 화면: ${lm.getFullYear()}.${p2(lm.getMonth()+1)}.${p2(lm.getDate())} ${p2(lm.getHours())}:${p2(lm.getMinutes())}`;
 
   updateInstallState();
+  syncExportSize();
   updateScreenInfo();
-  window.addEventListener('resize', updateScreenInfo);
+  window.addEventListener('resize', ()=> { syncExportSize(); updateScreenInfo(); updateFitNote(); });
   $('#btnExport').addEventListener('click', exportJson);
   const ii = $('#importInput');
   $('#btnImport').addEventListener('click', ()=> { ii.value=''; ii.click(); });
