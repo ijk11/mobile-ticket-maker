@@ -412,9 +412,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
           <div class="field">
             <label>사진 맞춤</label>
             <div class="seg">
+              <label><input type="radio" name="fit" value="width" data-bind="bg.fit"><span>가로 맞춤</span></label>
               <label><input type="radio" name="fit" value="cover" data-bind="bg.fit"><span>채우기</span></label>
               <label><input type="radio" name="fit" value="contain" data-bind="bg.fit"><span>전체 보기</span></label>
             </div>
+            <p class="hint"><b>가로 맞춤</b>은 사진 폭을 화면 폭에 딱 맞춥니다. 좌우가 잘리지 않고
+              비율도 그대로라, 폰 화면을 찍은 사진이면 위아래까지 꼭 맞습니다.
+              사진이 화면보다 짧으면 위아래가 비는데, 없는 부분을 지어내지는 않습니다 —
+              그때는 <b>채우기</b>로 바꾸거나 확대를 조금 올리세요.</p>
           </div>
           <div class="field"><label>가로 위치 <span class="val" data-val="bg.posX"></span></label>
             <input type="range" min="0" max="100" step="1" data-bind="bg.posX" data-unit="%"></div>
@@ -615,10 +620,10 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 6,
+    v: 7,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
-    bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
+    bg: { img:null, w:0, h:0, fit:'width', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
     /* 배경 위에 겹쳐 올리는 사진. 가로는 늘 가운데, 회전 없음.
        y 는 사진 가운데가 놓이는 높이(%), scale 은 티켓 폭 대비 너비(%) */
     ov: { img:null, w:0, h:0, y:50, scale:45, opacity:100, round:0, shadow:false },
@@ -641,7 +646,7 @@ function defaults(){
 const OLD = {
   mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85,
         size:15, weight:800, ls:0, speed:70, gap:24, lift:0 },
-  bg: { dim:35, gradient:true }
+  bg: { dim:35, gradient:true, fit:'cover' }
 };
 /* 더는 쓰지 않는 항목. 예전에 저장해 둔 티켓에서 치워 둔다(내보낸 .json 도 깔끔해진다) */
 const GONE = {
@@ -653,7 +658,7 @@ const GONE = {
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 6) return rec;
+  if(v >= 7) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -684,7 +689,10 @@ function migrate(rec){
     if(m.gap  === OLD.mq.gap)  m.gap  = d.mq.gap;
     if(m.lift === OLD.mq.lift) m.lift = d.mq.lift;
   }
-  rec.v = 6;
+  if(v < 7 && b){
+    if(b.fit === OLD.bg.fit) b.fit = d.bg.fit;   // 채우기(옛 기본값) → 가로 맞춤
+  }
+  rec.v = 7;
   return rec;
 }
 
@@ -969,9 +977,14 @@ function bgGeom(boxW, boxH){
   const b = state.bg;
   const nw = b.w || T.img.naturalWidth, nh = b.h || T.img.naturalHeight;
   if(!nw || !nh || !boxW || !boxH) return null;
-  const base = b.fit === 'contain'
-    ? Math.min(boxW / nw, boxH / nh)
-    : Math.max(boxW / nw, boxH / nh);
+  /* 셋 다 가로세로 비율은 그대로 둔다. 무엇을 기준으로 키우냐만 다르다.
+     width  — 가로폭에 딱 맞춘다. 좌우가 절대 잘리지 않고, 배율이 화면 높이와 무관해져서
+              작은 미리보기·전체화면·내보낸 그림에서 사진이 똑같은 크기로 그려진다.
+     cover  — 빈 곳이 없도록 채운다(긴 쪽이 잘린다).
+     contain— 사진 전체가 들어오게 한다(남는 곳이 생긴다). */
+  const base = b.fit === 'contain' ? Math.min(boxW / nw, boxH / nh)
+             : b.fit === 'cover'   ? Math.max(boxW / nw, boxH / nh)
+             :                       boxW / nw;
   const s = base * (Math.max(10, b.zoom) / 100);
   const dw = nw * s, dh = nh * s;
   const maxX = Math.max(0, (dw - boxW) / 2), maxY = Math.max(0, (dh - boxH) / 2);
