@@ -616,7 +616,7 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 5,
+    v: 6,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
     bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
@@ -626,8 +626,8 @@ function defaults(){
     mq: {
       text:'캡처화면은 입장이 제한됩니다.', font:'malgun',
       size:13, weight:300, ls:1.5, pad:11,
-      gap:24,                       /* 문구와 문구 사이 간격(px) */
-      lift:0,                       /* 바닥에서 띄운 높이 — 티켓 높이의 % */
+      gap:17,                       /* 문구와 문구 사이 간격(px) */
+      lift:4.5,                     /* 바닥에서 띄운 높이 — 티켓 높이의 % */
       color:'#ffffff', bg:'#000000', bgAlpha:100,
       speed:60, dir:'left', italic:false, running:true
     },
@@ -641,7 +641,7 @@ function defaults(){
    직접 바꾼 값은 그대로 둔다. */
 const OLD = {
   mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85,
-        size:15, weight:800, ls:0, speed:70 },
+        size:15, weight:800, ls:0, speed:70, gap:24, lift:0 },
   bg: { dim:35, gradient:true }
 };
 /* 더는 쓰지 않는 항목. 예전에 저장해 둔 티켓에서 치워 둔다(내보낸 .json 도 깔끔해진다) */
@@ -654,7 +654,7 @@ const GONE = {
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 5) return rec;
+  if(v >= 6) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -681,7 +681,11 @@ function migrate(rec){
     // 가로 위치·회전은 조절칸을 없앴으니 값도 치운다
     if(rec.ov) for(const k of GONE.ov) delete rec.ov[k];
   }
-  rec.v = 5;
+  if(v < 6 && m){
+    if(m.gap  === OLD.mq.gap)  m.gap  = d.mq.gap;
+    if(m.lift === OLD.mq.lift) m.lift = d.mq.lift;
+  }
+  rec.v = 6;
   return rec;
 }
 
