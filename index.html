@@ -189,15 +189,14 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 /* ===== 티켓 ===== */
 .ticket{
   position:relative;width:100%;height:100%;overflow:hidden;
-  display:flex;flex-direction:column;isolation:isolate;
+  /* 안에 놓이는 건 흐르는 글자 띠 하나뿐이다. 나머지(사진·겹친 사진)는 절대 위치라
+     flex 와 상관이 없다 → 띠를 맨 아래에 붙여 둔다 */
+  display:flex;flex-direction:column;justify-content:flex-end;isolation:isolate;
   background:#0d0f14;color:#fff;
-  --tk-accent:#ff4d6d;
-  --tk-inset-top:0px;                 /* 상태표시줄·노치 자리 */
   --tk-inset-bot:0px;                 /* 홈 인디케이터 자리 */
 }
 /* 기기의 안전영역은 전체화면으로 볼 때만 쓴다. 작은 미리보기에 넣으면 빈 띠만 생긴다 */
-#fsStage .ticket{--tk-inset-top:env(safe-area-inset-top,0px);--tk-inset-bot:env(safe-area-inset-bottom,0px)}
-.phone-screen .ticket{--tk-inset-top:30px}   /* 데스크톱 폰 프레임의 노치 자리 */
+#fsStage .ticket{--tk-inset-bot:env(safe-area-inset-bottom,0px)}
 .tk-bg{
   position:absolute;inset:0;z-index:0;overflow:hidden;background-color:#0d0f14;
   background-image:linear-gradient(160deg,#2a1d3f 0%,#121a2e 45%,#0d0f14 100%);
@@ -226,54 +225,6 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 }
 @keyframes sheen{0%{background-position:160% 0}55%,100%{background-position:-60% 0}}
 
-.tk-top{
-  position:relative;z-index:3;display:flex;align-items:center;gap:10px;flex:0 0 auto;
-  padding:calc(14px + var(--tk-inset-top)) 16px 10px;
-  font-size:14px;font-weight:700;
-}
-.tk-top-back{font-size:22px;line-height:1;opacity:.9;margin-top:-2px}
-.tk-top-title{flex:1;text-align:center;opacity:.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tk-top-time{font-variant-numeric:tabular-nums;opacity:.75;font-size:13px;min-width:44px;text-align:right}
-
-.tk-body{
-  position:relative;z-index:3;flex:1;min-height:0;display:flex;flex-direction:column;
-  gap:14px;padding:6px 20px 16px;overflow:hidden;
-  width:100%;max-width:560px;margin-inline:auto;
-}
-.ticket.no-top .tk-body{padding-top:calc(10px + var(--tk-inset-top))}
-/* 미리보기 띠가 짧을 때 제목이 카드 위로 비어져 나오지 않게 잘라 낸다 */
-.tk-head{display:grid;gap:7px;margin-top:6px;min-height:0;overflow:hidden}
-.tk-badge{
-  justify-self:start;font-size:11px;font-weight:800;letter-spacing:.3px;
-  padding:5px 10px;border-radius:999px;background:var(--tk-accent);color:#fff;
-  box-shadow:0 4px 14px rgba(0,0,0,.35);
-}
-.tk-badge:empty{display:none}
-.tk-title{font-size:27px;line-height:1.22;font-weight:800;letter-spacing:-.6px;word-break:keep-all}
-.tk-sub{font-size:14px;opacity:.82;word-break:keep-all}
-.tk-sub:empty{display:none}
-
-.tk-card{
-  margin-top:auto;flex:0 0 auto;border-radius:18px;padding:16px 16px 14px;
-  background:rgba(10,12,18,.42);border:1px solid rgba(255,255,255,.14);
-  display:grid;gap:12px;
-}
-.tk-card.blur{backdrop-filter:blur(14px) saturate(130%);-webkit-backdrop-filter:blur(14px) saturate(130%)}
-.tk-rows{display:grid;gap:9px;margin:0}
-.tk-row{display:flex;gap:12px;align-items:baseline;font-size:14px}
-.tk-row dt{flex:0 0 58px;font-size:12px;opacity:.65;font-weight:700}
-.tk-row dd{margin:0;flex:1;font-weight:700;word-break:keep-all;text-align:right}
-
-.tk-perf{position:relative;height:1px;margin:2px -16px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.45) 0 6px,transparent 6px 12px)}
-.tk-perf span{position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:#0b0d12;box-shadow:0 0 0 1px rgba(255,255,255,.12) inset}
-.tk-perf span:first-child{left:-9px}
-.tk-perf span:last-child{right:-9px}
-
-.tk-code{display:grid;gap:8px}
-.tk-bars{width:100%;height:56px;display:block;background:#fff;border-radius:6px;min-width:0}
-.tk-code-no{font-size:12px;letter-spacing:2.5px;font-weight:700;opacity:.8;text-align:center;font-variant-numeric:tabular-nums}
-.tk-card.hide-code .tk-perf,.tk-card.hide-code .tk-code{display:none}
-
 /* ===== 흐르는 글자 ===== */
 .tk-marquee{
   position:relative;z-index:4;flex:0 0 auto;overflow:hidden;
@@ -292,16 +243,28 @@ input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
 .fs{position:fixed;inset:0;z-index:200;background:#fff;display:flex}
 html.fs-on,html.fs-on body{background:#fff}
 .fs-stage{flex:1;position:relative;overflow:hidden;touch-action:none}
-.fs-ctrl{
-  position:absolute;top:calc(12px + var(--safe-t));right:12px;z-index:210;
-  display:flex;gap:8px;transition:opacity .25s;
+/* 전체화면은 잠겨 있다. 한 점을 5초 동안 누르고 있어야 풀린다.
+   눌린 자리에 동그란 게이지가 차오른다 (채우는 시간은 JS 의 HOLD_MS 와 맞춰 둘 것) */
+.fs-hold{position:absolute;display:block;width:96px;height:96px;margin:-48px 0 0 -48px;z-index:210;pointer-events:none}
+.fs-hold circle{fill:none;stroke-width:5;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%}
+.fs-hold-bg{stroke:rgba(255,255,255,.3)}
+.fs-hold-fg{
+  stroke:#fff;stroke-dasharray:276.5;stroke-dashoffset:276.5;
+  filter:drop-shadow(0 1px 4px rgba(0,0,0,.6));
 }
-.fs-ctrl.dim{opacity:0;pointer-events:none}
-.fs-ctrl button{
-  border:none;border-radius:999px;padding:11px 16px;font-weight:700;font-size:13.5px;
-  background:rgba(20,22,28,.72);color:#fff;backdrop-filter:blur(8px);
+.fs-hold.go .fs-hold-fg{animation:hold 5s linear forwards}
+/* transition 이 아니라 animation 인 이유: 방금 display:none 에서 나온 요소에는
+   transition 이 걸리지 않아 게이지가 한 번에 차 버린다 */
+@keyframes hold{from{stroke-dashoffset:276.5}to{stroke-dashoffset:0}}
+.fs-hint{
+  position:absolute;left:50%;top:calc(14px + var(--safe-t));transform:translateX(-50%);
+  z-index:210;padding:10px 16px;border-radius:999px;white-space:nowrap;
+  font-size:13px;font-weight:700;color:#fff;
+  background:rgba(12,14,18,.62);backdrop-filter:blur(8px);
   box-shadow:0 2px 10px rgba(0,0,0,.4);
+  transition:opacity .5s;pointer-events:none;
 }
+.fs-hint.dim{opacity:0}
 
 /* ===== 토스트 · 시트 ===== */
 .toast{
@@ -352,7 +315,6 @@ html.fs-on,html.fs-on body{background:#fff}
   }
   .phone::before{display:none}
   .phone-screen{border-radius:0}
-  .phone-screen .ticket{--tk-inset-top:0px}
 
   .stage{order:1}
   .grip{order:2}
@@ -407,29 +369,6 @@ html.fs-on,html.fs-on body{background:#fff}
           <div class="tk-veil" id="tkVeil"></div>
           <img class="tk-ov" id="tkOv" alt="" hidden>
           <div class="tk-sheen" id="tkSheen"></div>
-
-          <div class="tk-top" id="tkTop">
-            <span class="tk-top-back">‹</span>
-            <span class="tk-top-title" id="tkTopTitle">모바일 티켓</span>
-            <span class="tk-top-time" id="tkTopTime"></span>
-          </div>
-
-          <div class="tk-body">
-            <div class="tk-head">
-              <span class="tk-badge" id="tkBadge"></span>
-              <h1 class="tk-title" id="tkTitle"></h1>
-              <p class="tk-sub" id="tkSub"></p>
-            </div>
-            <div class="tk-card" id="tkCard">
-              <dl class="tk-rows" id="tkRows"></dl>
-              <div class="tk-perf"><span></span><span></span></div>
-              <div class="tk-code">
-                <canvas class="tk-bars" id="tkBars" width="600" height="112"></canvas>
-                <div class="tk-code-no" id="tkCodeNo"></div>
-              </div>
-            </div>
-          </div>
-
           <div class="tk-marquee" id="tkMarquee"><div class="mq-track" id="mqTrack"></div></div>
         </div>
 
@@ -452,12 +391,6 @@ html.fs-on,html.fs-on body{background:#fff}
       </button>
       <button role="tab" data-tab="text" aria-selected="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h14M3 12h18M3 17h10"/><path d="M18.5 15.2l3.2 1.8-3.2 1.8z" fill="currentColor" stroke="none"/></svg><span>글자</span>
-      </button>
-      <button role="tab" data-tab="info" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 9h10M7 13h7M7 17h4"/></svg><span>정보</span>
-      </button>
-      <button role="tab" data-tab="look" aria-selected="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg><span>모양</span>
       </button>
       <button role="tab" data-tab="save" aria-selected="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="M8 10.5l4 4 4-4"/><path d="M4.5 17v3h15v-3"/></svg><span>저장</span>
@@ -513,6 +446,8 @@ html.fs-on,html.fs-on body{background:#fff}
             <input type="range" min="0" max="100" step="1" data-bind="bg.gray" data-unit="%"></div>
           <label class="switch"><span>아래쪽 그라디언트 (글자 잘 보이게)</span>
             <input type="checkbox" data-bind="bg.gradient"></label>
+          <label class="switch"><span>반짝이는 홀로그램 효과</span>
+            <input type="checkbox" data-bind="look.sheen"></label>
         </div>
 
         <div class="card">
@@ -597,89 +532,9 @@ html.fs-on,html.fs-on body{background:#fff}
           <div class="field"><label>띠 배경 투명도 <span class="val" data-val="mq.bgAlpha"></span></label>
             <input type="range" min="0" max="100" step="1" data-bind="mq.bgAlpha" data-unit="%"></div>
           <label class="switch"><span>기울임꼴</span><input type="checkbox" data-bind="mq.italic"></label>
+          <label class="switch"><span>글자 그림자</span><input type="checkbox" data-bind="look.shadow"></label>
         </div>
         <p class="hint">문구는 띠 끝까지 같은 간격으로 반복됩니다. 띠 높이를 0 으로 두면 글자에 딱 붙습니다.</p>
-      </section>
-
-      <!-- 티켓 정보 -->
-      <section class="pane" data-pane="info">
-        <div class="card">
-          <div class="field"><label>공연명 / 제목</label>
-            <input class="inp" type="text" data-bind="info.title" placeholder="예: 2026 단독 콘서트"></div>
-          <div class="field"><label>부제</label>
-            <input class="inp" type="text" data-bind="info.sub" placeholder="예: THE FIRST ENCORE"></div>
-          <div class="field"><label>배지</label>
-            <input class="inp" type="text" data-bind="info.badge" maxlength="14" placeholder="예: 예매완료"></div>
-        </div>
-        <div class="card">
-          <div class="field"><label>일시</label>
-            <input class="inp" type="text" data-bind="info.date" placeholder="예: 2026.12.24 (목) 19:30">
-            <div class="btn-row">
-              <input class="inp" type="datetime-local" id="dtPick" style="flex:1">
-              <button class="btn" id="btnDtFill">이 날짜로</button>
-            </div>
-          </div>
-          <div class="field"><label>장소</label>
-            <input class="inp" type="text" data-bind="info.place" placeholder="예: 올림픽공원 체조경기장"></div>
-          <div class="field"><label>좌석</label>
-            <input class="inp" type="text" data-bind="info.seat" placeholder="예: 1층 A구역 7열 12번"></div>
-          <div class="field"><label>매수</label>
-            <input class="inp" type="text" data-bind="info.count" placeholder="예: 1매"></div>
-        </div>
-        <div class="card">
-          <div class="field"><label>예매번호</label>
-            <input class="inp" type="text" data-bind="info.no" placeholder="예: T2612240012"></div>
-          <div class="field"><label>예매자</label>
-            <input class="inp" type="text" data-bind="info.holder" placeholder="예: 홍길동"></div>
-          <div class="grid2">
-            <div class="field"><label>추가 항목 이름</label>
-              <input class="inp" type="text" data-bind="info.exLabel" maxlength="8" placeholder="입장"></div>
-            <div class="field"><label>추가 항목 내용</label>
-              <input class="inp" type="text" data-bind="info.exValue" placeholder="18:30부터"></div>
-          </div>
-          <p class="hint">비워 둔 항목은 티켓에 나타나지 않습니다.</p>
-        </div>
-      </section>
-
-      <!-- 모양 -->
-      <section class="pane" data-pane="look">
-        <div class="card">
-          <label class="switch"><span>티켓 정보 넣기</span><input type="checkbox" data-bind="look.info"></label>
-          <p class="hint">공연명·일시·장소·좌석·바코드를 티켓에 올립니다. 켜면 아래에 <b>정보</b> 탭이 생깁니다.</p>
-        </div>
-        <div class="card">
-          <div class="grid2">
-            <div class="field"><label>강조색</label><input type="color" data-bind="look.accent"></div>
-            <div class="field"><label>글자색</label><input type="color" data-bind="look.text"></div>
-          </div>
-          <div class="field"><label>제목 글꼴</label>
-            <select class="sel" data-bind="look.font">
-              <option value="sans">기본 (고딕)</option>
-              <option value="malgun">맑은 고딕</option>
-              <option value="serif">세리프 (명조)</option>
-              <option value="mono">고정폭</option>
-            </select></div>
-          <div class="field"><label>제목 크기 <span class="val" data-val="look.titleSize"></span></label>
-            <input type="range" min="16" max="48" step="1" data-bind="look.titleSize" data-unit="px"></div>
-        </div>
-        <div class="card" id="lookCardGroup">
-          <div class="pane-title">정보 카드</div>
-          <div class="field"><label>투명도 <span class="val" data-val="look.cardAlpha"></span></label>
-            <input type="range" min="0" max="100" step="1" data-bind="look.cardAlpha" data-unit="%"></div>
-          <label class="switch"><span>흐림 효과</span><input type="checkbox" data-bind="look.cardBlur"></label>
-          <label class="switch"><span>바코드 영역 표시</span><input type="checkbox" data-bind="look.code"></label>
-        </div>
-        <div class="card">
-          <div class="pane-title">상단바</div>
-          <label class="switch"><span>상단바 표시</span><input type="checkbox" data-bind="look.topbar"></label>
-          <div class="field"><label>상단바 제목</label>
-            <input class="inp" type="text" data-bind="look.topTitle" placeholder="모바일 티켓"></div>
-          <label class="switch"><span>현재 시각 표시</span><input type="checkbox" data-bind="look.topClock"></label>
-        </div>
-        <div class="card">
-          <label class="switch"><span>글자 그림자</span><input type="checkbox" data-bind="look.shadow"></label>
-          <label class="switch"><span>반짝이는 홀로그램 효과</span><input type="checkbox" data-bind="look.sheen"></label>
-        </div>
       </section>
 
       <!-- 저장 · 설치 -->
@@ -730,10 +585,11 @@ html.fs-on,html.fs-on body{background:#fff}
 
 <div class="fs" id="fs" hidden>
   <div class="fs-stage" id="fsStage"></div>
-  <div class="fs-ctrl" id="fsCtrl">
-    <button id="btnFsFull">전체화면</button>
-    <button id="btnFsClose">닫기</button>
-  </div>
+  <svg class="fs-hold" id="fsHold" viewBox="0 0 100 100" aria-hidden="true" hidden>
+    <circle class="fs-hold-bg" cx="50" cy="50" r="44"></circle>
+    <circle class="fs-hold-fg" id="fsHoldFg" cx="50" cy="50" r="44"></circle>
+  </svg>
+  <div class="fs-hint" id="fsHint">화면을 <b>5초간 꾹</b> 누르면 빠져나옵니다</div>
 </div>
 
 <div class="sheet-wrap" id="sheet">
@@ -770,7 +626,7 @@ function defaults(){
   return {
     id: 'tk_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
     name: '내 티켓',
-    v: 3,
+    v: 4,
     updated: Date.now(),
     /* 사진은 올린 그대로 보여 준다. 어둡게·그라디언트는 필요한 사람만 켠다 */
     bg: { img:null, w:0, h:0, fit:'cover', posX:50, posY:50, zoom:100, dim:0, blur:0, gray:0, gradient:false },
@@ -783,18 +639,9 @@ function defaults(){
       color:'#ffffff', bg:'#000000', bgAlpha:100,
       speed:70, dir:'left', italic:false, running:true
     },
-    info: {
-      title:'2026 단독 콘서트', sub:'THE FIRST ENCORE', badge:'예매완료',
-      date:'2026.12.24 (목) 19:30', place:'올림픽공원 체조경기장',
-      seat:'1층 A구역 7열 12번', count:'1매',
-      no:'T2612240012', holder:'홍길동', exLabel:'', exValue:''
-    },
-    look: {
-      info:false,                 /* 티켓 정보(공연명·일시·좌석·바코드) — 기본은 없음 */
-      accent:'#ff4d6d', text:'#ffffff', font:'sans', titleSize:27,
-      cardAlpha:42, cardBlur:true, topbar:true, topTitle:'모바일 티켓', topClock:true,
-      code:true, shadow:true, sheen:false
-    }
+    /* 티켓에 남는 건 〈배경 사진 + 겹친 사진 + 흐르는 글자〉뿐이다.
+       그림자는 흐르는 글자에, 반짝임은 사진 위에 걸린다 */
+    look: { shadow:true, sheen:false }
   };
 }
 
@@ -804,10 +651,16 @@ const OLD = {
   mq: { text:'캡처 화면으로는 입장할 수 없습니다', font:'sans', bg:'#ff4d6d', bgAlpha:85 },
   bg: { dim:35, gradient:true }
 };
+/* 더는 쓰지 않는 항목. 예전에 저장해 둔 티켓에서 치워 둔다(내보낸 .json 도 깔끔해진다) */
+const GONE = {
+  root: ['info'],
+  look: ['info','accent','text','font','titleSize','cardAlpha','cardBlur','topbar','topTitle','topClock','code'],
+  mq:   ['sep','clock']
+};
 function migrate(rec){
   if(!rec || typeof rec !== 'object') return rec;
   const v = rec.v|0;
-  if(v >= 3) return rec;
+  if(v >= 4) return rec;
   const d = defaults(), m = rec.mq, b = rec.bg;
   if(v < 2 && m){
     if(m.text === OLD.mq.text)       m.text = d.mq.text;
@@ -819,7 +672,12 @@ function migrate(rec){
     if(b.dim === OLD.bg.dim)           b.dim = d.bg.dim;
     if(b.gradient === OLD.bg.gradient) b.gradient = d.bg.gradient;
   }
-  rec.v = 3;
+  if(v < 4){
+    for(const k of GONE.root) delete rec[k];
+    if(rec.look) for(const k of GONE.look) delete rec.look[k];
+    if(m)        for(const k of GONE.mq)   delete m[k];
+  }
+  rec.v = 4;
   return rec;
 }
 
@@ -865,10 +723,7 @@ function toast(msg){
   toastTimer = setTimeout(()=> el.classList.remove('on'), 2200);
 }
 
-const WD = ['일','월','화','수','목','금','토'];
 const p2 = n => String(n).padStart(2,'0');
-function fmtKo(d){ return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} (${WD[d.getDay()]}) ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
-function hhmm(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; }
 function hhmmss(){ const d=new Date(); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
 
 const PREF = {
@@ -1080,15 +935,11 @@ const T = {};
 function cacheNodes(){
   T.ticket=$('#ticket'); T.bg=$('#tkBg'); T.img=$('#tkImg'); T.ov=$('#tkOv');
   T.veil=$('#tkVeil'); T.sheen=$('#tkSheen');
-  T.top=$('#tkTop'); T.topTitle=$('#tkTopTitle'); T.topTime=$('#tkTopTime');
-  T.badge=$('#tkBadge'); T.title=$('#tkTitle'); T.sub=$('#tkSub');
-  T.head=document.querySelector('.tk-head');
-  T.card=$('#tkCard'); T.rows=$('#tkRows'); T.bars=$('#tkBars'); T.codeNo=$('#tkCodeNo');
   T.mq=$('#tkMarquee'); T.track=$('#mqTrack');
 }
 
 function render(){
-  const {bg, info, look} = state;
+  const {bg, look} = state;
 
   T.bg.classList.toggle('has-img', !!bg.img);
   if(bg.img && T.img.getAttribute('src') !== bg.img) T.img.src = bg.img;
@@ -1101,47 +952,6 @@ function render(){
     : dim;
 
   T.sheen.classList.toggle('on', !!look.sheen);
-
-  T.ticket.style.setProperty('--tk-accent', look.accent);
-  T.ticket.style.color = look.text;
-  T.ticket.style.fontFamily = FONTS[look.font] || FONTS.sans;
-  T.ticket.style.textShadow = look.shadow ? '0 2px 14px rgba(0,0,0,.6)' : 'none';
-
-  T.ticket.classList.toggle('no-top', !look.topbar);
-  T.top.style.display = look.topbar ? 'flex' : 'none';
-  T.topTitle.textContent = look.topTitle || '';
-  T.topTime.textContent = look.topClock ? hhmm() : '';
-
-  /* 티켓 정보를 끄면 배경 사진과 흐르는 글자만 남는다 */
-  T.head.style.display = look.info ? 'grid' : 'none';
-  $('#lookCardGroup').hidden = !look.info;
-  syncTabs();
-
-  T.badge.textContent = info.badge || '';
-  T.title.textContent = info.title || '';
-  T.title.style.fontSize = look.titleSize + 'px';
-  T.sub.textContent = info.sub || '';
-
-  T.card.style.background = `rgba(10,12,18,${look.cardAlpha/100})`;
-  T.card.classList.toggle('blur', !!look.cardBlur);
-  T.card.classList.toggle('hide-code', !look.code);
-
-  const rows = [
-    ['일시', info.date], ['장소', info.place], ['좌석', info.seat], ['매수', info.count],
-    ['예매번호', info.no], ['예매자', info.holder], [info.exLabel, info.exValue]
-  ].filter(r => esc(r[0]).trim() && esc(r[1]).trim());
-
-  T.rows.innerHTML = '';
-  for(const [k,v] of rows){
-    const div = document.createElement('div'); div.className = 'tk-row';
-    const dt = document.createElement('dt'); dt.textContent = k;
-    const dd = document.createElement('dd'); dd.textContent = v;
-    div.append(dt, dd); T.rows.appendChild(div);
-  }
-  T.card.style.display = (look.info && (rows.length || look.code)) ? 'grid' : 'none';
-
-  T.codeNo.textContent = info.no || '';
-  if(look.info && look.code) drawBars();
 
   styleMarquee();
 }
@@ -1321,37 +1131,6 @@ function syncBgInputs(){
   }
 }
 
-function drawBars(){
-  const cv = T.bars;
-  const w = Math.max(120, Math.round(cv.offsetWidth || cv.getBoundingClientRect().width || 300));
-  const dpr = Math.min(3, window.devicePixelRatio || 1);
-  const h = 56;
-  if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){
-    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
-  }
-  const cx = cv.getContext('2d');
-  cx.setTransform(dpr,0,0,dpr,0,0);
-  cx.fillStyle = '#fff'; cx.fillRect(0,0,w,h);
-  cx.fillStyle = '#111';
-  for(const [x,bw] of barPattern(barSeed(), w)) cx.fillRect(x, 6, bw, h-12);
-}
-
-/* 예매번호로 만드는 장식용 줄무늬 (미리보기와 내보내기가 같은 모양을 쓴다) */
-function barSeed(){ return String(state.info.no || state.info.title || 'TICKET'); }
-function barPattern(seed, w){
-  let s = 2166136261;
-  for(let i=0;i<seed.length;i++){ s ^= seed.charCodeAt(i); s = Math.imul(s, 16777619); }
-  const rnd = () => { s ^= s<<13; s ^= s>>>17; s ^= s<<5; return ((s>>>0) % 1000) / 1000; };
-  const out = [];
-  let x = 8;
-  while(x < w - 8){
-    const bw = 1 + Math.floor(rnd()*3);
-    if(rnd() > 0.38) out.push([x, bw]);
-    x += bw + 1 + Math.floor(rnd()*3);
-  }
-  return out;
-}
-
 /* ============================================================
    6. 흐르는 글자
    ============================================================ */
@@ -1412,10 +1191,6 @@ function styleMarquee(){
   T.track.style.textShadow = state.look.shadow ? '0 1px 6px rgba(0,0,0,.45)' : 'none';
   applySpeed();
 }
-
-setInterval(() => {
-  if(T.topTime && state.look.topClock) T.topTime.textContent = hhmm();
-}, 1000);
 
 /* ============================================================
    7. 폼 ↔ 상태
@@ -1507,26 +1282,75 @@ async function openPreview(){
   setThemeColor(THEME_FS);
   layoutBg();
   buildMarquee();
-  if(state.look.info && state.look.code) drawBars();
-  hideCtrlSoon();
+  lockReset();
+
+  // 브라우저 주소창까지 숨긴다. 버튼 클릭에서 바로 이어지는 호출이라야 허용된다.
+  // (아이폰 사파리는 이 API 가 없다 → 조용히 넘어간다)
+  try { const el = $('#fs'); if(el.requestFullscreen) await el.requestFullscreen(); } catch(e){}
   try { if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
 }
 function closePreview(){
+  holdCancel();
   $('#phoneScreen').appendChild(T.ticket);
   $('#fs').hidden = true;
   document.documentElement.classList.remove('fs-on');
   setThemeColor(THEME_APP);
-  $('#fsCtrl').classList.remove('dim');
   clearTimeout(ctrlTimer);
   layoutBg();
   buildMarquee();
-  if(state.look.info && state.look.code) drawBars();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
   if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
 }
-function hideCtrlSoon(){
+
+/* ---- 전체화면 잠금 ----
+   실수로 한 번 스친다고 닫히면 티켓을 내밀 수가 없다. 그래서 전체화면은 잠겨 있고,
+   화면의 **한 점**을 HOLD_MS 동안 누르고 있어야 빠져나온다.
+   손가락이 HOLD_SLIP 넘게 움직이거나 떼면 처음부터 다시 센다.
+   게이지가 차오르는 시간은 CSS 의 .fs-hold.go 전환 시간과 맞춰 둘 것. */
+const HOLD_MS = 5000, HOLD_SLIP = 24;
+let holdTimer = null, holdFrom = null;
+
+function holdStart(x, y){
+  const el = $('#fsHold');
+  holdFrom = {x, y};
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  // SVG 요소에는 el.hidden 프로퍼티가 없다(HTML 전용). 속성을 직접 지워야 보인다
+  el.removeAttribute('hidden');
+  el.classList.remove('go');
+  void el.getBoundingClientRect();        // 게이지를 처음부터 다시 그리게 한다
+  el.classList.add('go');
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => {
+    try { if(navigator.vibrate) navigator.vibrate(30); } catch(e){}
+    closePreview();
+  }, HOLD_MS);
+}
+function holdCancel(){
+  clearTimeout(holdTimer); holdTimer = null; holdFrom = null;
+  const el = $('#fsHold');
+  if(!el) return;
+  el.classList.remove('go');
+  el.setAttribute('hidden', '');
+}
+function lockReset(){
+  holdCancel();
+  const hint = $('#fsHint');
+  hint.classList.remove('dim');
   clearTimeout(ctrlTimer);
-  ctrlTimer = setTimeout(()=> $('#fsCtrl').classList.add('dim'), 2600);
+  ctrlTimer = setTimeout(()=> hint.classList.add('dim'), 4500);
+}
+function wireFsLock(){
+  const stage = $('#fsStage');
+  stage.addEventListener('pointerdown', e => {
+    if(holdFrom) return;                  // 두 번째 손가락은 세지 않는다
+    holdStart(e.clientX, e.clientY);
+  });
+  stage.addEventListener('pointermove', e => {
+    if(!holdFrom) return;
+    if(Math.hypot(e.clientX - holdFrom.x, e.clientY - holdFrom.y) > HOLD_SLIP) holdCancel();
+  });
+  for(const ev of ['pointerup','pointercancel','pointerleave']) stage.addEventListener(ev, holdCancel);
 }
 
 /* ============================================================
@@ -1570,56 +1394,6 @@ function pathRound(cx, x, y, w, h, r){
     cx.moveTo(x+rr,y); cx.arcTo(x+w,y,x+w,y+h,rr); cx.arcTo(x+w,y+h,x,y+h,rr);
     cx.arcTo(x,y+h,x,y,rr); cx.arcTo(x,y,x+w,y,rr); cx.closePath();
   }
-}
-
-/* 글자가 몇 줄로 끊겼는지는 브라우저에게 물어본다 (Range 로 글자마다 위치를 재서 줄별로 묶는다) */
-function lineBoxes(el, base){
-  const node = el.firstChild;
-  if(!node || node.nodeType !== 3) return [];
-  const text = node.nodeValue || '';
-  const range = document.createRange();
-  const out = [];
-  let cur = null;
-  for(let i = 0; i < text.length; i++){
-    range.setStart(node, i); range.setEnd(node, i + 1);
-    const r = range.getBoundingClientRect();
-    if(!r.width && !r.height){ if(cur) cur.text += text[i]; continue; }
-    if(!cur || Math.abs(r.top - cur.rawTop) > 1){
-      cur = { rawTop:r.top, top:r.top-base.top, bottom:r.bottom-base.top,
-              left:r.left-base.left, right:r.right-base.left, text:text[i] };
-      out.push(cur);
-    } else {
-      cur.text += text[i];
-      cur.left = Math.min(cur.left, r.left - base.left);
-      cur.right = Math.max(cur.right, r.right - base.left);
-      cur.bottom = Math.max(cur.bottom, r.bottom - base.top);
-    }
-  }
-  return out;
-}
-
-function drawTextEl(cx, el, base, opt){
-  if(!el) return;
-  const cs = getComputedStyle(el);
-  if(cs.display === 'none' || cs.visibility === 'hidden') return;
-  if(!(el.textContent || '').trim()) return;
-  const lines = lineBoxes(el, base);
-  if(!lines.length) return;
-  const o = opt || {};
-  cx.save();
-  cx.globalAlpha = Number(cs.opacity || 1);
-  cx.fillStyle = cs.color;
-  cx.font = `${cs.fontStyle} ${cs.fontWeight} ${parseFloat(cs.fontSize)}px ${cs.fontFamily}`;
-  if('letterSpacing' in cx) cx.letterSpacing = (cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing);
-  if(o.shadow){ cx.shadowColor = 'rgba(0,0,0,.6)'; cx.shadowBlur = 14; cx.shadowOffsetY = 2; }
-  cx.textBaseline = 'middle';
-  cx.textAlign = o.align || 'left';
-  for(const L of lines){
-    const y = (L.top + L.bottom) / 2;
-    const x = o.align === 'right' ? L.right : o.align === 'center' ? (L.left + L.right)/2 : L.left;
-    cx.fillText(L.text.trim(), x, y);
-  }
-  cx.restore();
 }
 
 function paintBackdrop(cx){
@@ -1700,7 +1474,6 @@ function drawTicket(root){
     const r = el.getBoundingClientRect();
     return { x:r.left - base.left, y:r.top - base.top, w:r.width, h:r.height };
   };
-  const shown = el => el && getComputedStyle(el).display !== 'none';
 
   const cv = document.createElement('canvas');
   cv.width = Math.round(EX_W * EX_SCALE);
@@ -1709,83 +1482,6 @@ function drawTicket(root){
   cx.scale(EX_SCALE, EX_SCALE);
 
   paintBackdrop(cx);
-
-  const sh = { shadow: !!look.shadow };
-
-  /* 상단바 */
-  if(shown(q('.tk-top'))){
-    drawTextEl(cx, q('.tk-top-back'), base, {align:'left', shadow:sh.shadow});
-    drawTextEl(cx, q('.tk-top-title'), base, {align:'center', shadow:sh.shadow});
-    drawTextEl(cx, q('.tk-top-time'), base, {align:'right', shadow:sh.shadow});
-  }
-
-  /* 배지 · 제목 · 부제 */
-  const badge = q('.tk-badge');
-  if(badge && (badge.textContent || '').trim() && shown(q('.tk-head'))){
-    const r = R(badge);
-    cx.save();
-    cx.shadowColor = 'rgba(0,0,0,.35)'; cx.shadowBlur = 14; cx.shadowOffsetY = 4;
-    cx.fillStyle = look.accent;
-    pathRound(cx, r.x, r.y, r.w, r.h, r.h/2); cx.fill();
-    cx.restore();
-    drawTextEl(cx, badge, base, {align:'left'});
-  }
-  if(shown(q('.tk-head'))){
-    drawTextEl(cx, q('.tk-title'), base, {align:'left', shadow:sh.shadow});
-    drawTextEl(cx, q('.tk-sub'), base, {align:'left', shadow:sh.shadow});
-  }
-
-  /* 정보 카드 */
-  const card = q('.tk-card');
-  if(shown(card)){
-    const r = R(card);
-    cx.save();
-    pathRound(cx, r.x, r.y, r.w, r.h, 18);
-    cx.clip();
-    if(look.cardBlur && ('filter' in cx)){
-      cx.filter = `blur(14px)`;
-      paintBackdrop(cx);
-      cx.filter = 'none';
-    }
-    cx.fillStyle = `rgba(10,12,18,${look.cardAlpha/100})`;
-    cx.fillRect(r.x, r.y, r.w, r.h);
-    cx.restore();
-    cx.save();
-    cx.strokeStyle = 'rgba(255,255,255,.14)'; cx.lineWidth = 1;
-    pathRound(cx, r.x + .5, r.y + .5, r.w - 1, r.h - 1, 18); cx.stroke();
-    cx.restore();
-
-    for(const row of root.querySelectorAll('.tk-row')){
-      drawTextEl(cx, row.querySelector('dt'), base, {align:'left'});
-      drawTextEl(cx, row.querySelector('dd'), base, {align:'right'});
-    }
-
-    const perf = q('.tk-perf');
-    if(shown(perf)){
-      const p = R(perf);
-      cx.save();
-      cx.strokeStyle = 'rgba(255,255,255,.45)'; cx.lineWidth = 1; cx.setLineDash([6,6]);
-      cx.beginPath(); cx.moveTo(p.x, p.y + .5); cx.lineTo(p.x + p.w, p.y + .5); cx.stroke();
-      cx.restore();
-      for(const sp of perf.children){
-        const s = R(sp);
-        cx.fillStyle = '#0b0d12';
-        cx.beginPath(); cx.arc(s.x + s.w/2, s.y + s.h/2, s.w/2, 0, Math.PI*2); cx.fill();
-      }
-    }
-
-    const bars = q('.tk-bars');
-    if(shown(bars)){
-      const r2 = R(bars);
-      cx.save();
-      pathRound(cx, r2.x, r2.y, r2.w, r2.h, 6); cx.clip();
-      cx.fillStyle = '#fff'; cx.fillRect(r2.x, r2.y, r2.w, r2.h);
-      cx.fillStyle = '#111';
-      for(const [bx, bw] of barPattern(barSeed(), r2.w)) cx.fillRect(r2.x + bx, r2.y + 6, bw, r2.h - 12);
-      cx.restore();
-      drawTextEl(cx, q('.tk-code-no'), base, {align:'center'});
-    }
-  }
 
   /* 흐르는 글자 띠 */
   const mqEl = q('.tk-marquee');
@@ -1867,15 +1563,6 @@ function wireTabs(){
   };
   for(const b of tabs) b.addEventListener('click', ()=> showTab(b.dataset.tab));
 }
-/* 정보를 끄면 정보 탭 자체를 없앤다 */
-function syncTabs(){
-  const btn = document.querySelector('#tabs button[data-tab="info"]');
-  if(!btn) return;
-  const on = !!state.look.info;
-  btn.hidden = !on;
-  if(!on && btn.getAttribute('aria-selected') === 'true') showTab('look');
-}
-
 function setStageFrac(f){
   const v = Math.min(0.78, Math.max(0.18, f));
   document.documentElement.style.setProperty('--stage-h', (v*100).toFixed(1) + 'dvh');
@@ -1899,23 +1586,6 @@ function wireGrip(){
   grip.addEventListener('pointercancel', end);
   grip.addEventListener('dblclick', ()=> setStageFrac(0.44));
   setStageFrac(Number(PREF.get('stage', 0.44)));
-}
-
-/* 전체화면에서 아래로 쓸어내리면 닫기 */
-function wireSwipeClose(){
-  const el = $('#fsStage');
-  let y0 = null, x0 = null;
-  el.addEventListener('touchstart', e => {
-    if(e.touches.length !== 1) return;
-    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX;
-  }, {passive:true});
-  el.addEventListener('touchend', e => {
-    if(y0 == null) return;
-    const t = e.changedTouches[0];
-    const dy = t.clientY - y0, dx = Math.abs(t.clientX - x0);
-    y0 = null;
-    if(dy > 90 && dx < 70) closePreview();
-  }, {passive:true});
 }
 
 /* ============================================================
@@ -1959,14 +1629,6 @@ function wire(){
   window.addEventListener('dragover', e => e.preventDefault());
   window.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) loadPhoto(f, 'bg'); });
 
-  $('#btnDtFill').addEventListener('click', ()=> {
-    const v = $('#dtPick').value;
-    const d = v ? new Date(v) : new Date();
-    if(isNaN(d)) return toast('날짜를 먼저 고르세요');
-    state.info.date = fmtKo(d);
-    fillForm(); render(); save();
-  });
-
   $('#ticketSelect').addEventListener('change', e => loadTicket(e.target.value));
   $('#btnNew').addEventListener('click', ()=> newTicket(null));
 
@@ -2006,18 +1668,7 @@ function wire(){
     state.bg.posX = 50; state.bg.posY = 50; state.bg.zoom = 100;
     fillForm(); render(); save(); toast('가운데로 되돌렸습니다');
   });
-  $('#btnFsClose').addEventListener('click', closePreview);
-  $('#btnFsFull').addEventListener('click', ()=> {
-    const el = $('#fs');
-    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-    else if(el.requestFullscreen) el.requestFullscreen().catch(()=> toast('이 브라우저에서는 전체화면을 쓸 수 없습니다'));
-    else toast('이 브라우저에서는 전체화면을 쓸 수 없습니다');
-  });
-  $('#fsStage').addEventListener('click', ()=> {
-    const c = $('#fsCtrl');
-    if(c.classList.contains('dim')){ c.classList.remove('dim'); hideCtrlSoon(); }
-    else c.classList.add('dim');
-  });
+  // 컴퓨터에서는 Esc 로도 빠져나온다 (폰에는 키보드가 없으니 꾹 누르기가 유일한 길이다)
   document.addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#fs').hidden) closePreview(); });
 
   $('#btnPng').addEventListener('click', exportPng);
@@ -2054,10 +1705,9 @@ function wireObservers(){
   const ro = new ResizeObserver(() => {
     layoutBg();
     clearTimeout(roTimer);
-    roTimer = setTimeout(() => { buildMarquee(); if(state.look.info && state.look.code) drawBars(); }, 120);
+    roTimer = setTimeout(buildMarquee, 120);
   });
   ro.observe(T.mq);
-  ro.observe(T.bars);
   ro.observe(T.bg);
 }
 
@@ -2117,7 +1767,7 @@ async function hardRefresh(){
   bindForm();
   wireTabs();
   wireGrip();
-  wireSwipeClose();
+  wireFsLock();
   wireGesture();
   wire();
   wireObservers();
